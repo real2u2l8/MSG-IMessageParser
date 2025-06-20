@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 
 // Windows OLE/COM related headers
 #include <windows.h>
@@ -14,6 +13,7 @@
 
 // Standard C++ headers
 #include <string>
+#include <iostream>
 #include <vector>
 #include <map>
 #include <memory>
