@@ -28,8 +28,9 @@ bld/
 *.tlog
 *.tlog.*
 *.tlog.*.*
-*.tlog.*.*.*
-*.tlog.*.*.*.*
+*.iobj
+*.ipdb
+*.res
 
 # Visual Studio 임시 파일들
 *.tmp
