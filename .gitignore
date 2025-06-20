@@ -24,6 +24,12 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+*.tlog/
+*.tlog
+*.tlog.*
+*.tlog.*.*
+*.tlog.*.*.*
+*.tlog.*.*.*.*
 
 # Visual Studio 임시 파일들
 *.tmp
