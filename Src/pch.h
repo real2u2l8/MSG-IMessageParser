@@ -10,19 +10,32 @@
 #include <atlbase.h>
 #include <atlcom.h>
 #include <atlstr.h>
+#include <fcntl.h>
+#include <io.h>
 
 // Standard C++ headers
-#include <string>
-#include <iostream>
-#include <vector>
+// Containers
 #include <map>
-#include <memory>
+#include <string>
+#include <vector>
+
+// I/O Streams
 #include <fstream>
+#include <iostream>
 #include <sstream>
+
+// Utilities
 #include <algorithm>
-#include <regex>
 #include <chrono>
 #include <iomanip>
+#include <memory>
+#include <regex>
+
+// C Standard Library
+#include <stdarg.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <time.h>
 
 // Additional Windows headers for file operations
 #include <shlobj.h>
@@ -34,3 +47,6 @@
 // For Unicode support
 #include <codecvt>
 #include <locale>
+
+// Project Header
+#include "showdbg.h"

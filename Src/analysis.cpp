@@ -1,77 +1,9 @@
 #include "pch.h"
 #include "analysis.h"
-
-// OutLook Mail의 .msg 파일의 구조 문서, 여기서 각각의 Substg를 확인할 수 있다. by. real.hansy
-// https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxmsg/621801cb-b617-474c-bce6-69037d73461a
-// http://www.five-ten-sg.com/libpst/rn01re06.html
-// OutLook Mail의 .msg 파일 구조는 버전에 따라 바뀔 수 있다.
-// KESM_OutMail.exe를 통해 만들어지는 .msg 덤프파일은 간혹 이슈가 발생한다.
-// 메인 스토리지 내의 필드 
-#define		SUBSTG_SENDER		L"__substg1.0_0C1F"		// PR_SENDER_EMAIL_ADDRESS_W:	송신자의 이메일 주소 (Exchange 값일 수도 있음)
-#define		SUBSTG_TO			L"__substg1.0_0E04"		// PR_DISPLAY_TO_W:				수신자(To) 전체 표시 문자열,	주소가 아닐 수 있음
-#define		SUBSTG_CC			L"__substg1.0_0E03"		// PR_DISPLAY_CC_W:				참조(CC) 전체 표시 문자열		주소가 아닐 수 있음
-#define		SUBSTG_BCC			L"__substg1.0_0E02"		// PR_DISPLAY_BCC_W:			숨은참조(BCC) 전체 표시 문자열	주소가 아닐 수 있음
-#define		SUBSTG_SUBJECT		L"__substg1.0_0037"		// PR_SUBJECT_W:				메일 제목
-#define		SUBSTG_BODY			L"__substg1.0_1000"		// PR_BODY_W:					메일 본문 (텍스트)
-#define		SUBSTG_HEADER		L"__substg1.0_007D"		// PR_SUBJECT_PREFIX:			제목 앞 접두어 ("RE:", "FW:" 등)
-// 서브 스토리지
-#define     MAIL_MAIN			L"__nameid_version"		// Named Property의 이름-GUID-Tag 매핑 정보를 담는 메타 스토리지
-#define     MAIL_SUBTO			L"__recip_version"		// 각 수신자(TO/CC/BCC)의 Recipient Table 스토리지
-#define		MAIL_PROPERTY		L"__properties_version"	// 서브 스토리지 내의 세부 속성을 담는 스토리지
-#define     MAIL_ATTACH			L"__attach_version"		// 첨부파일 관련 속성과 데이터를 담는 Attach 스토리지
-// __attach_version 서브 트리
-#define		SUBSTG_ATTACHDISPLAY	L"__substg1.0_3001"		// PR_DISPLAY_NAME_W:        첨부파일 표시 이름
-#define		SUBSTG_ATTACHNAME		L"__substg1.0_3707"		// PR_ATTACH_LONG_FILENAME_W: 첨부파일 실제 이름 (긴 형식)
-#define		SUBSTG_ATTACHDATA		L"__substg1.0_3701"		// PR_ATTACH_DATA_BIN:        첨부파일 바이너리 데이터
-// 특수 매크로
-#define		SUBSTG_ADDRTYPE		    L"__substg1.0_3002"		// PR_ADDRTYPE_W:             주소 타입 (SMTP, EX 등)
-#define		SUBSTG_SENDER_ADDRTYPE	L"__substg1.0_0C1E"		// PR_SENDER_ADDRTYPE_W:      송신자 주소 타입 (SMTP, EX 등)
-#define		SUBSTG_SMTPADDRESS		L"__substg1.0_39FE"		// PR_SMTP_ADDRESS_W:         EX 타입의 실제 이메일 주소
-#define		SUBSTG_SUBTO		    L"__substg1.0_3003"		// PR_EMAIL_ADDRESS_W:        수신자 이메일 주소
-#define		SUBSTG_RECIPIENT_TYPE	L"__substg1.0_0C15"		// PR_RECIPIENT_TYPE:		수신자 역할 구분 (To, Cc, Bcc)
-// _recip_version 서브 트리
-#define		RECIP_TYPE_TO			1       // 수신자(To)
-#define		RECIP_TYPE_CC			2       // 참조(Cc)
-#define		RECIP_TYPE_BCC			3       // 숨은참조(Bcc)
-
-
-#define		MAX_RECIPIENT_ADDR_LEN	256  // TO/CC/BCC 통합용
-
-// 250617.Outmail.exe 메일덤프 분석 이슈. by. real.hansy
-// 이메일 주소 타입을 나타내는 열거형
-// SMTP: 일반적인 인터넷 이메일 주소 형식 (예: user@domain.com)
-// EX: Exchange 서버에서 사용하는 내부 주소 형식
-// UNKNOWN: 알 수 없는 주소 형식
-enum class AddrType
-{
-	SMTP,
-	EX,
-	UNKNOWN
-};
-
-// 250618.Outmail.exe 메일덤프 분석 이슈. by. real.hansy
-/**
- * @brief 수신자 주소 캐싱 구조체
- *
- * @details
- * - 메일의 수신자(TO, CC, BCC) 정보를 임시로 저장하기 위한 구조체입니다.
- * - 파싱 전에 추출된 원본 문자열을 타입별로 구분하여 보관하며,
- * - 후처리 단계에서 mail_info 구조체로 전달되기 전 ToContentsParse() 함수로 가공됩니다.
- *
- * @note
- * - 수신자 구분을 명확히 하기 위해 TO/CC/BCC를 각각 멤버로 분리하였으며,
- * - 타입값도 함께 보관함으로써 향후 조건 분기 처리나 로깅 등 추가 활용이 용이합니다.
- * - STL map 등의 범용 컨테이너 대신 구조체 고정형을 사용하여 처리 속도와 코드 명료성을 확보하였습니다.
- */
-typedef struct _RecipCache {
-	char* pszTo;		// To 주소 문자열 (콤마/세미콜론 포함된 원본 그대로)
-	char* pszCc;		// Cc 주소 문자열 (콤마/세미콜론 포함된 원본 그대로)
-	char* pszBcc;	    // Bcc 주소 문자열 (콤마/세미콜론 포함된 원본 그대로)
-
-	int   nToType;   // 1 = TO
-	int   nCcType;   // 2 = CC
-	int   nBccType;  // 3 = BCC
-} RecipCache;
+#include <iomanip>
+#include <sstream>
+#include <algorithm>
+#include <fstream>
 
 // 여기에 실제 함수 구현들이 들어갈 예정입니다.
 // 현재는 모든 정의가 analysis.h로 이동되었습니다.
@@ -83,12 +15,17 @@ MSGParser::MSGParser() : m_fileCount(0), m_errorCount(0) {
 }
 
 MSGParser::~MSGParser() {
+    // 모든 리소스 정리
+    LogMessage(L"MSGParser destructor called - cleaning up resources");
+    
     // COM 해제
     CoUninitialize();
+    
+    LogMessage(L"MSGParser cleanup completed");
 }
 
 bool MSGParser::ParseMSGFile(const std::wstring& filePath, const std::wstring& outputDir) {
-    LogMessage(L"MSG 파일 파싱 시작: " + filePath);
+    LogMessage(L"MSG file parsing started: " + filePath);
     
     m_outputBaseDir = outputDir;
     m_fileCount = 0;
@@ -96,7 +33,7 @@ bool MSGParser::ParseMSGFile(const std::wstring& filePath, const std::wstring& o
     
     // 출력 디렉토리 생성
     if (!CreateDirectoryRecursive(outputDir)) {
-        LogError(L"출력 디렉토리 생성 실패: " + outputDir);
+        LogError(L"Failed to create output directory: " + outputDir);
         return false;
     }
     
@@ -105,15 +42,28 @@ bool MSGParser::ParseMSGFile(const std::wstring& filePath, const std::wstring& o
     HRESULT hr = StgOpenStorage(
         filePath.c_str(),
         nullptr,
-        STGM_READ | STGM_SHARE_DENY_WRITE,
+        STGM_READ | STGM_SHARE_DENY_NONE,  // DENY_WRITE 대신 DENY_NONE 사용
         nullptr,
         0,
         &pStorage
     );
     
     if (FAILED(hr) || !pStorage) {
-        LogError(L"MSG 파일 열기 실패: " + filePath);
-        return false;
+        // 다른 접근 모드로 재시도
+        hr = StgOpenStorage(
+            filePath.c_str(),
+            nullptr,
+            STGM_READ | STGM_SHARE_EXCLUSIVE,  // EXCLUSIVE 모드 시도
+            nullptr,
+            0,
+            &pStorage
+        );
+        
+        if (FAILED(hr) || !pStorage) {
+            LogError(L"Failed to open MSG file: " + filePath + L" (HRESULT: 0x" + 
+                     std::to_wstring(hr) + L") - Access denied even with different modes");
+            return false;
+        }
     }
     
     // 루트 스토리지부터 재귀적 탐색 시작
@@ -122,8 +72,8 @@ bool MSGParser::ParseMSGFile(const std::wstring& filePath, const std::wstring& o
     // 스토리지 해제
     pStorage->Release();
     
-    LogMessage(L"파싱 완료 - 처리된 파일: " + std::to_wstring(m_fileCount) + 
-               L", 오류: " + std::to_wstring(m_errorCount));
+    LogMessage(L"Parsing completed - Processed files: " + std::to_wstring(m_fileCount) + 
+               L", Errors: " + std::to_wstring(m_errorCount));
     
     return m_errorCount == 0;
 }
@@ -136,7 +86,8 @@ void MSGParser::TraverseStorage(IStorage* pStorage, const std::wstring& currentP
     HRESULT hr = pStorage->EnumElements(0, nullptr, 0, &pEnum);
     
     if (FAILED(hr) || !pEnum) {
-        LogError(L"스토리지 열거 실패: " + currentPath);
+        LogError(L"Failed to enumerate storage: " + currentPath + L" (HRESULT: 0x" + 
+                 std::to_wstring(hr) + L")");
         return;
     }
     
@@ -149,16 +100,20 @@ void MSGParser::TraverseStorage(IStorage* pStorage, const std::wstring& currentP
         std::wstring safeName = MakeSafeFileName(elementName);
         std::wstring elementOutputPath = outputDir + L"\\" + safeName;
         
+        LogMessage(L"Processing element: " + elementName + L" (Type: " + 
+                   (stat.type == STGTY_STORAGE ? L"Storage" : L"Stream") + L")");
+        
         if (stat.type == STGTY_STORAGE) {
             // 스토리지인 경우 - 폴더 생성 후 재귀 탐색
-            LogMessage(L"스토리지 발견: " + fullPath);
+            LogMessage(L"Found storage: " + fullPath);
             
             if (CreateDirectoryRecursive(elementOutputPath)) {
                 IStorage* pSubStorage = nullptr;
+                // 다른 접근 모드 시도
                 hr = pStorage->OpenStorage(
                     stat.pwcsName,
                     nullptr,
-                    STGM_READ | STGM_SHARE_DENY_WRITE,
+                    STGM_READ | STGM_SHARE_DENY_NONE,  // DENY_WRITE 대신 DENY_NONE 사용
                     nullptr,
                     0,
                     &pSubStorage
@@ -168,23 +123,40 @@ void MSGParser::TraverseStorage(IStorage* pStorage, const std::wstring& currentP
                     TraverseStorage(pSubStorage, fullPath, elementOutputPath);
                     pSubStorage->Release();
                 } else {
-                    LogError(L"하위 스토리지 열기 실패: " + fullPath);
-                    m_errorCount++;
+                    // 다른 접근 모드로 재시도
+                    hr = pStorage->OpenStorage(
+                        stat.pwcsName,
+                        nullptr,
+                        STGM_READ | STGM_SHARE_EXCLUSIVE,  // EXCLUSIVE 모드 시도
+                        nullptr,
+                        0,
+                        &pSubStorage
+                    );
+                    
+                    if (SUCCEEDED(hr) && pSubStorage) {
+                        TraverseStorage(pSubStorage, fullPath, elementOutputPath);
+                        pSubStorage->Release();
+                    } else {
+                        LogError(L"Failed to open sub storage: " + fullPath + L" (HRESULT: 0x" + 
+                                 std::to_wstring(hr) + L") - Access denied even with different modes");
+                        m_errorCount++;
+                    }
                 }
             } else {
-                LogError(L"디렉토리 생성 실패: " + elementOutputPath);
+                LogError(L"Failed to create directory: " + elementOutputPath);
                 m_errorCount++;
             }
         }
         else if (stat.type == STGTY_STREAM) {
             // 스트림인 경우 - hex 파일로 저장
-            LogMessage(L"스트림 발견: " + fullPath);
+            LogMessage(L"Found stream: " + fullPath);
             
             IStream* pStream = nullptr;
+            // 다른 접근 모드 시도
             hr = pStorage->OpenStream(
                 stat.pwcsName,
                 nullptr,
-                STGM_READ | STGM_SHARE_DENY_WRITE,
+                STGM_READ | STGM_SHARE_DENY_NONE,  // DENY_WRITE 대신 DENY_NONE 사용
                 0,
                 &pStream
             );
@@ -198,8 +170,28 @@ void MSGParser::TraverseStorage(IStorage* pStorage, const std::wstring& currentP
                 }
                 pStream->Release();
             } else {
-                LogError(L"스트림 열기 실패: " + fullPath);
-                m_errorCount++;
+                // 다른 접근 모드로 재시도
+                hr = pStorage->OpenStream(
+                    stat.pwcsName,
+                    nullptr,
+                    STGM_READ | STGM_SHARE_EXCLUSIVE,  // EXCLUSIVE 모드 시도
+                    0,
+                    &pStream
+                );
+                
+                if (SUCCEEDED(hr) && pStream) {
+                    std::wstring hexFilePath = elementOutputPath + L".hex";
+                    if (SaveStreamAsHex(pStream, hexFilePath)) {
+                        m_fileCount++;
+                    } else {
+                        m_errorCount++;
+                    }
+                    pStream->Release();
+                } else {
+                    LogError(L"Failed to open stream: " + fullPath + L" (HRESULT: 0x" + 
+                             std::to_wstring(hr) + L") - Access denied even with different modes");
+                    m_errorCount++;
+                }
             }
         }
         
@@ -219,13 +211,13 @@ bool MSGParser::SaveStreamAsHex(IStream* pStream, const std::wstring& outputPath
     STATSTG stat;
     HRESULT hr = pStream->Stat(&stat, STATFLAG_NONAME);
     if (FAILED(hr)) {
-        LogError(L"스트림 크기 확인 실패: " + outputPath);
+        LogError(L"Failed to get stream size: " + outputPath);
         return false;
     }
     
     DWORD streamSize = stat.cbSize.LowPart;
     if (streamSize == 0) {
-        LogMessage(L"빈 스트림 건너뜀: " + outputPath);
+        LogMessage(L"Skipping empty stream: " + outputPath);
         return true;
     }
     
@@ -235,24 +227,21 @@ bool MSGParser::SaveStreamAsHex(IStream* pStream, const std::wstring& outputPath
     
     hr = pStream->Read(buffer.data(), streamSize, &bytesRead);
     if (FAILED(hr) || bytesRead != streamSize) {
-        LogError(L"스트림 데이터 읽기 실패: " + outputPath);
+        LogError(L"Failed to read stream data: " + outputPath);
         return false;
     }
     
-    // hex 문자열로 변환
-    std::string hexString = BinaryToHexString(buffer.data(), bytesRead);
-    
-    // 파일로 저장
-    std::ofstream file(outputPath);
+    // 파일로 이진 저장 (.dat 확장자)
+    std::wstring datPath = outputPath.substr(0, outputPath.find_last_of(L'.')) + L".dat";
+    std::ofstream file(datPath, std::ios::binary);
     if (!file.is_open()) {
-        LogError(L"hex 파일 생성 실패: " + outputPath);
+        LogError(L"Failed to create dat file: " + datPath);
         return false;
     }
-    
-    file << hexString;
+    file.write(reinterpret_cast<const char*>(buffer.data()), bytesRead);
     file.close();
     
-    LogMessage(L"hex 파일 저장 완료: " + outputPath + L" (" + std::to_wstring(bytesRead) + L" bytes)");
+    LogMessage(L"Binary file saved: " + datPath + L" (" + std::to_wstring(bytesRead) + L" bytes)");
     return true;
 }
 
@@ -297,7 +286,7 @@ bool MSGParser::CreateDirectoryRecursive(const std::wstring& path) {
     if (path.empty()) return false;
     
     // 이미 존재하는지 확인
-    DWORD attrs = GetFileAttributes(path.c_str());
+    DWORD attrs = GetFileAttributesW(path.c_str());
     if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
         return true;  // 이미 존재함
     }
@@ -312,8 +301,7 @@ bool MSGParser::CreateDirectoryRecursive(const std::wstring& path) {
     }
     
     // 현재 디렉토리 생성
-    return CreateDirectory(path.c_str(), nullptr) == TRUE || 
-           GetLastError() == ERROR_ALREADY_EXISTS;
+    return CreateDirectoryW(path.c_str(), nullptr) == TRUE || GetLastError() == ERROR_ALREADY_EXISTS;
 }
 
 void MSGParser::LogMessage(const std::wstring& message) {
@@ -322,4 +310,367 @@ void MSGParser::LogMessage(const std::wstring& message) {
 
 void MSGParser::LogError(const std::wstring& error) {
     std::wcerr << L"[ERROR] " << error << std::endl;
+}
+
+// MAPI Property Parser 구현
+MAPIPropertyParser::MAPIPropertyParser() : m_debugEnabled(true), m_logLevel(3) {
+    LogInfo(L"MAPIPropertyParser initialized");
+}
+
+MAPIPropertyParser::~MAPIPropertyParser() {
+    // 동적 할당된 데이터 해제
+    for (auto& prop : m_properties) {
+        if (prop.Data) {
+            delete[] prop.Data;
+        }
+    }
+    LogDebug(L"MAPIPropertyParser destroyed");
+}
+
+void MAPIPropertyParser::LogDebug(const std::wstring& message) {
+    if (m_debugEnabled && m_logLevel >= 3) {
+        std::wcout << L"[DEBUG] " << message << std::endl;
+    }
+}
+
+void MAPIPropertyParser::LogInfo(const std::wstring& message) {
+    if (m_debugEnabled && m_logLevel >= 2) {
+        std::wcout << L"[INFO] " << message << std::endl;
+    }
+}
+
+void MAPIPropertyParser::LogWarning(const std::wstring& message) {
+    if (m_debugEnabled && m_logLevel >= 1) {
+        std::wcerr << L"[WARN] " << message << std::endl;
+    }
+}
+
+void MAPIPropertyParser::LogError(const std::wstring& message) {
+    if (m_debugEnabled && m_logLevel >= 0) {
+        std::wcerr << L"[ERROR] " << message << std::endl;
+    }
+}
+
+void MAPIPropertyParser::LogHexDump(const std::wstring& prefix, const BYTE* data, DWORD size, DWORD maxBytes) {
+    if (!m_debugEnabled || m_logLevel < 3 || !data || size == 0) {
+        return;
+    }
+    
+    std::wcout << L"[DEBUG] " << prefix << L" (" << size << L" bytes): ";
+    
+    DWORD bytesToShow = (size < maxBytes) ? size : maxBytes;
+    for (DWORD i = 0; i < bytesToShow; i++) {
+        std::wcout << std::hex << std::setw(2) << std::setfill(L'0') << (int)data[i];
+        if (i < bytesToShow - 1) std::wcout << L" ";
+    }
+    
+    if (size > maxBytes) {
+        std::wcout << L"...";
+    }
+    std::wcout << std::endl;
+}
+
+bool MAPIPropertyParser::ParsePropertiesStream(const std::vector<BYTE>& streamData) {
+    LogInfo(L"Starting to parse MAPI Property Stream");
+    LogDebug(L"Stream data size: " + std::to_wstring(streamData.size()) + L" bytes");
+    
+    if (streamData.size() < 16) {
+        LogError(L"Stream data too small, minimum 16 bytes required for first property definition");
+        return false;
+    }
+    
+    // 전체 데이터 구조 분석 (디버그용)
+    LogDebug(L"First 64 bytes as hex dump:");
+    for (int i = 0; i < (64 < (int)streamData.size() ? 64 : (int)streamData.size()); i++) {
+        if (i % 16 == 0) LogDebug(L"");
+        LogDebug(L" 0x" + std::to_wstring((int)streamData[i]));
+    }
+    
+    // 16바이트 MAPI Property Stream 구조:
+    // 4 bytes: PropertyTag (예: 0x0C150003 = PR_RECIPIENT_TYPE + PT_LONG)
+    // 4 bytes: Flags (0x00000006 등, Reserved/Presence Flag)
+    // 4 bytes: Value Offset (Value Section 내 위치)
+    // 4 bytes: Value Size (값의 길이)
+    
+    LogInfo(L"Parsing 16-byte MAPI Property definitions");
+    
+    DWORD definitionCount = streamData.size() / 16;
+    LogInfo(L"Calculated definition count: " + std::to_wstring(definitionCount));
+    
+    // Value Section 시작 위치 찾기 (첫 번째 정의의 Offset 값)
+    DWORD firstOffset = streamData[4] | (streamData[5] << 8) | 
+                        (streamData[6] << 16) | (streamData[7] << 24);
+    LogInfo(L"Value Section starts at offset: " + std::to_wstring(firstOffset));
+    
+    // Property Definition Section 파싱
+    for (DWORD i = 0; i < definitionCount && (i * 16 + 15) < streamData.size(); i++) {
+        DWORD offset = i * 16;
+        LogDebug(L"Parsing definition " + std::to_wstring(i + 1) + L" at offset " + std::to_wstring(offset));
+
+        // Property Definition 구조에 맞게 파싱
+        DWORD valueOffset = streamData[offset] | (streamData[offset + 1] << 8) |
+                            (streamData[offset + 2] << 16) | (streamData[offset + 3] << 24);
+        DWORD flags = streamData[offset + 4] | (streamData[offset + 5] << 8) |
+                      (streamData[offset + 6] << 16) | (streamData[offset + 7] << 24);
+        DWORD propertyTag = streamData[offset + 8] | (streamData[offset + 9] << 8) |
+                            (streamData[offset + 10] << 16) | (streamData[offset + 11] << 24);
+        DWORD valueSize = streamData[offset + 12] | (streamData[offset + 13] << 8) |
+                          (streamData[offset + 14] << 16) | (streamData[offset + 15] << 24);
+
+        // PropertyTag에서 Property ID와 Type 분리
+        WORD propertyId = (WORD)(propertyTag & 0xFFFF);
+        WORD propertyType = (WORD)((propertyTag >> 16) & 0xFFFF);
+
+        LogDebug(L"Definition " + std::to_wstring(i + 1) + L":");
+        LogDebug(L"  PropertyTag: 0x" + std::to_wstring(propertyTag) +
+                 L" (ID: 0x" + std::to_wstring(propertyId) + L", Type: 0x" + std::to_wstring(propertyType) + L")");
+        LogDebug(L"  PropertyName: " + PropertyTagToString(propertyId));
+        LogDebug(L"  PropertyType: " + PropertyTypeToString(propertyType));
+        LogDebug(L"  Flags: 0x" + std::to_wstring(flags));
+        LogDebug(L"  ValueOffset: " + std::to_wstring(valueOffset));
+        LogDebug(L"  ValueSize: " + std::to_wstring(valueSize));
+
+        // Value Section에서 실제 데이터 추출
+        if (valueOffset + valueSize <= streamData.size()) {
+            LogDebug(L"Extracting value data from offset " + std::to_wstring(valueOffset) +
+                     L" with size " + std::to_wstring(valueSize));
+
+            PROPERTY_VALUE propValue;
+            propValue.PropertyTag = propertyId;
+            propValue.PropertyType = propertyType;
+            propValue.Size = valueSize;
+            propValue.Data = new BYTE[valueSize];
+            memcpy(propValue.Data, &streamData[valueOffset], valueSize);
+
+            LogHexDump(L"Value data for " + PropertyTagToString(propertyId), propValue.Data, valueSize);
+
+            m_properties.push_back(propValue);
+            LogDebug(L"Successfully added property: " + PropertyTagToString(propertyId));
+
+            // 특별한 해석 (PR_RECIPIENT_TYPE)
+            if (propertyId == PR_RECIPIENT_TYPE && valueSize >= 4) {
+                DWORD recipientType = 0;
+                memcpy(&recipientType, propValue.Data, 4);
+                LogInfo(L"  *** PR_RECIPIENT_TYPE found with value: " + std::to_wstring(recipientType));
+                switch (recipientType) {
+                    case 1: LogInfo(L"    -> Recipient Type: TO"); break;
+                    case 2: LogInfo(L"    -> Recipient Type: CC"); break;
+                    case 3: LogInfo(L"    -> Recipient Type: BCC"); break;
+                    default: LogInfo(L"    -> Recipient Type: UNKNOWN"); break;
+                }
+            }
+        } else {
+            LogError(L"Value data out of bounds - Offset: " + std::to_wstring(valueOffset) +
+                     L", Size: " + std::to_wstring(valueSize) +
+                     L", Stream size: " + std::to_wstring(streamData.size()));
+        }
+    }
+    
+    LogInfo(L"Parsing completed - Found " + std::to_wstring(m_properties.size()) + L" properties");
+    return true;
+}
+
+bool MAPIPropertyParser::ParseFromHexFile(const std::wstring& hexFilePath) {
+    LogInfo(L"Reading hex file: " + hexFilePath);
+    
+    // RAII 래퍼를 사용하여 안전한 파일 핸들링
+    SafeFileHandle fileHandle(hexFilePath, std::ios::binary);
+    if (!fileHandle.is_open()) {
+        LogError(L"Failed to open hex file: " + hexFilePath);
+        return false;
+    }
+    
+    std::vector<BYTE> streamData;
+    std::string line;
+    
+    // hex 파일의 각 줄을 읽어서 바이트로 변환
+    while (std::getline(fileHandle.get(), line)) {
+        // 공백 제거
+        line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+        
+        // 2자리씩 hex 값을 읽어서 바이트로 변환
+        for (size_t i = 0; i < line.length(); i += 2) {
+            if (i + 1 < line.length()) {
+                std::string hexByte = line.substr(i, 2);
+                try {
+                    BYTE byteValue = (BYTE)std::stoi(hexByte, nullptr, 16);
+                    streamData.push_back(byteValue);
+                } catch (const std::exception& e) {
+                    LogWarning(L"Invalid hex value: " + std::wstring(hexByte.begin(), hexByte.end()));
+                }
+            }
+        }
+    }
+    
+    // RAII 래퍼가 자동으로 파일을 닫음
+    LogInfo(L"Read " + std::to_wstring(streamData.size()) + L" bytes from hex file");
+    
+    // 읽은 데이터로 파싱 수행
+    return ParsePropertiesStream(streamData);
+}
+
+std::wstring MAPIPropertyParser::GetStringValue(WORD propertyTag) {
+    for (const auto& prop : m_properties) {
+        if (prop.PropertyTag == propertyTag) {
+            return InterpretValue(prop);
+        }
+    }
+    return L"";
+}
+
+DWORD MAPIPropertyParser::GetLongValue(WORD propertyTag) {
+    for (const auto& prop : m_properties) {
+        if (prop.PropertyTag == propertyTag && prop.Size >= 4) {
+            DWORD value = 0;
+            memcpy(&value, prop.Data, 4);
+            return value;
+        }
+    }
+    return 0;
+}
+
+std::vector<BYTE> MAPIPropertyParser::GetBinaryValue(WORD propertyTag) {
+    for (const auto& prop : m_properties) {
+        if (prop.PropertyTag == propertyTag) {
+            return std::vector<BYTE>(prop.Data, prop.Data + prop.Size);
+        }
+    }
+    return std::vector<BYTE>();
+}
+
+void MAPIPropertyParser::PrintParsedProperties() {
+    std::wcout << L"\n=== Parsed MAPI Properties ===" << std::endl;
+    
+    for (const auto& prop : m_properties) {
+        std::wcout << L"Tag: 0x" << std::hex << prop.PropertyTag 
+                   << L" (" << PropertyTagToString(prop.PropertyTag) << L")" << std::endl;
+        std::wcout << L"Type: 0x" << std::hex << prop.PropertyType 
+                   << L" (" << PropertyTypeToString(prop.PropertyType) << L")" << std::endl;
+        std::wcout << L"Size: " << std::dec << prop.Size << L" bytes" << std::endl;
+        std::wcout << L"Value: " << InterpretValue(prop) << std::endl;
+        std::wcout << L"---" << std::endl;
+    }
+}
+
+std::wstring MAPIPropertyParser::InterpretValue(const PROPERTY_VALUE& value) {
+    switch (value.PropertyType) {
+        case PT_STRING8:
+            return InterpretString8(value.Data, value.Size);
+        case PT_UNICODE:
+            return InterpretUnicode(value.Data, value.Size);
+        case PT_LONG:
+            return InterpretLong(value.Data, value.Size);
+        case PT_BINARY:
+            return InterpretBinary(value.Data, value.Size);
+        case PT_BOOLEAN:
+            return value.Size >= 2 ? (*(WORD*)value.Data ? L"True" : L"False") : L"Unknown";
+        default:
+            return L"[Unsupported Type]";
+    }
+}
+
+std::wstring MAPIPropertyParser::InterpretString8(const BYTE* data, DWORD size) {
+    if (size == 0) return L"";
+    
+    // 8-bit 문자열을 유니코드로 변환
+    int len = MultiByteToWideChar(CP_ACP, 0, (LPCCH)data, size, nullptr, 0);
+    if (len > 0) {
+        wchar_t* wstr = new wchar_t[len];
+        MultiByteToWideChar(CP_ACP, 0, (LPCCH)data, size, wstr, len);
+        std::wstring result(wstr);
+        delete[] wstr;
+        return result;
+    }
+    return L"[String8 Conversion Failed]";
+}
+
+std::wstring MAPIPropertyParser::InterpretUnicode(const BYTE* data, DWORD size) {
+    if (size == 0) return L"";
+    
+    // Unicode 문자열 (2바이트씩)
+    size_t charCount = size / 2;
+    return std::wstring((wchar_t*)data, charCount);
+}
+
+std::wstring MAPIPropertyParser::InterpretBinary(const BYTE* data, DWORD size) {
+    if (size == 0) return L"[Empty Binary]";
+    
+    std::wstringstream ss;
+    ss << L"[Binary " << size << L" bytes: ";
+    
+    DWORD maxShow = (size < 16) ? size : 16;
+    for (DWORD i = 0; i < maxShow; i++) {
+        ss << std::hex << std::setw(2) << std::setfill(L'0') << (int)data[i];
+        if (i < maxShow - 1) ss << L" ";
+    }
+    
+    if (size > 16) ss << L"...";
+    ss << L"]";
+    
+    return ss.str();
+}
+
+std::wstring MAPIPropertyParser::InterpretLong(const BYTE* data, DWORD size) {
+    if (size >= 4) {
+        DWORD value = 0;
+        memcpy(&value, data, 4);
+        return std::to_wstring(value);
+    }
+    return L"[Invalid Long]";
+}
+
+std::wstring MAPIPropertyParser::PropertyTagToString(WORD propertyTag) {
+    switch (propertyTag) {
+        case PR_RECIPIENT_TYPE: return L"PR_RECIPIENT_TYPE";
+        case PR_DISPLAY_NAME: return L"PR_DISPLAY_NAME";
+        case PR_SMTP_ADDRESS: return L"PR_SMTP_ADDRESS";
+        case PR_EMAIL_ADDRESS: return L"PR_EMAIL_ADDRESS";
+        case PR_ADDRTYPE: return L"PR_ADDRTYPE";
+        case PR_ENTRYID: return L"PR_ENTRYID";
+        case PR_SEARCH_KEY: return L"PR_SEARCH_KEY";
+        default: return L"UNKNOWN_TAG";
+    }
+}
+
+std::wstring MAPIPropertyParser::PropertyTypeToString(WORD propertyType) {
+    switch (propertyType) {
+        case PT_UNSPECIFIED: return L"PT_UNSPECIFIED";
+        case PT_NULL: return L"PT_NULL";
+        case PT_I2: return L"PT_I2";
+        case PT_LONG: return L"PT_LONG";
+        case PT_R4: return L"PT_R4";
+        case PT_DOUBLE: return L"PT_DOUBLE";
+        case PT_CURRENCY: return L"PT_CURRENCY";
+        case PT_APPTIME: return L"PT_APPTIME";
+        case PT_ERROR: return L"PT_ERROR";
+        case PT_BOOLEAN: return L"PT_BOOLEAN";
+        case PT_OBJECT: return L"PT_OBJECT";
+        case PT_I8: return L"PT_I8";
+        case PT_STRING8: return L"PT_STRING8";
+        case PT_UNICODE: return L"PT_UNICODE";
+        case PT_SYSTIME: return L"PT_SYSTIME";
+        case PT_CLSID: return L"PT_CLSID";
+        case PT_BINARY: return L"PT_BINARY";
+        default: return L"UNKNOWN_TYPE";
+    }
+}
+
+// SafeFileHandle 구현 추가
+SafeFileHandle::SafeFileHandle(const std::wstring& path, std::ios::openmode mode)
+    : m_path(path), m_mode(mode) {
+    m_file.open(path, mode);
+}
+
+SafeFileHandle::~SafeFileHandle() {
+    if (m_file.is_open()) {
+        m_file.close();
+    }
+}
+
+bool SafeFileHandle::is_open() const {
+    return m_file.is_open();
+}
+
+std::ifstream& SafeFileHandle::get() {
+    return m_file;
 }
