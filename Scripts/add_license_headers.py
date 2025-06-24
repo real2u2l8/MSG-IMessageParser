@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-GNU GPL 3.0 라이선스 헤더 추가 스크립트
-MSG File Parser Tool 프로젝트용
+GNU GPL 3.0 License Header Addition Script
+MSG File Parser Tool Project
 
-사용법: python add_license_headers.py
+Usage: python add_license_headers.py
 """
 
 import os
 import glob
 import re
 
-# 라이선스 헤더 템플릿
+# License header template
 LICENSE_HEADER = '''/*
  * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
  * Copyright (C) 2025  real2u2l8
@@ -33,12 +33,12 @@ LICENSE_HEADER = '''/*
 '''
 
 def should_skip_file(filename):
-    """제외할 파일인지 확인"""
+    """Check if file should be skipped"""
     skip_patterns = [
-        'pch',  # 미리 컴파일된 헤더
-        'resource.h',  # 자동 생성 파일
-        'IMessageParser.rc',  # 리소스 파일
-        'bitmap1.bmp',  # 비트맵 파일
+        'pch',  # Precompiled header
+        'resource.h',  # Auto-generated file
+        'IMessageParser.rc',  # Resource file
+        'bitmap1.bmp',  # Bitmap file
     ]
     
     for pattern in skip_patterns:
@@ -47,51 +47,64 @@ def should_skip_file(filename):
     return False
 
 def has_license_header(content):
-    """파일에 이미 라이선스 헤더가 있는지 확인"""
+    """Check if file already has license header"""
     return "MSG File Parser Tool - Advanced MSG file analysis tool" in content
 
 def add_license_header(filepath):
-    """파일에 라이선스 헤더 추가"""
+    """Add license header to file"""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        # Try multiple encodings to read file
+        content = None
+        encodings_to_try = ['utf-8', 'cp949', 'euc-kr', 'latin-1', 'iso-8859-1']
         
-        # 이미 라이선스 헤더가 있으면 건너뛰기
-        if has_license_header(content):
-            print(f"[INFO] 이미 라이선스 헤더가 있음: {filepath}")
+        for encoding in encodings_to_try:
+            try:
+                with open(filepath, 'r', encoding=encoding) as f:
+                    content = f.read()
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            print(f"[ERROR] Cannot read file (encoding issue): {filepath}")
             return False
         
-        # 파일 시작 부분에 라이선스 헤더 추가
+        # Skip if license header already exists
+        if has_license_header(content):
+            print(f"[INFO] License header already exists: {filepath}")
+            return False
+        
+        # Add license header at the beginning of file
         new_content = LICENSE_HEADER + content
         
-        # 백업 파일 생성
+        # Create backup file
         backup_path = filepath + '.backup'
         with open(backup_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        # 새 내용으로 파일 덮어쓰기
+        # Overwrite file with new content
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(new_content)
         
-        print(f"[INFO] 라이선스 헤더 추가됨: {filepath}")
+        print(f"[INFO] License header added: {filepath}")
         return True
         
     except Exception as e:
-        print(f"[ERROR] 오류 발생 ({filepath}): {e}")
+        print(f"[ERROR] Error occurred ({filepath}): {e}")
         return False
 
 def main():
-    """메인 함수"""
-    print("[INFO] GNU GPL 3.0 라이선스 헤더 추가 스크립트")
+    """Main function"""
+    print("[INFO] GNU GPL 3.0 License Header Addition Script")
     print("=" * 50)
     
-    # Src 디렉토리에서 .cpp와 .h 파일 찾기
+    # Find .cpp and .h files in Src directory
     src_dir = "Src"
     if not os.path.exists(src_dir):
-        print(f"[ERROR] {src_dir} 디렉토리를 찾을 수 없습니다.")
+        print(f"[ERROR] Cannot find {src_dir} directory.")
         return
     
-    # 파일 패턴
+    # File patterns
     patterns = [
         os.path.join(src_dir, "*.cpp"),
         os.path.join(src_dir, "*.h")
@@ -101,25 +114,25 @@ def main():
     for pattern in patterns:
         target_files.extend(glob.glob(pattern))
     
-    # 제외할 파일 필터링
+    # Filter out files to skip
     target_files = [f for f in target_files if not should_skip_file(f)]
     
     if not target_files:
-        print("[INFO] 처리할 파일을 찾을 수 없습니다.")
+        print("[INFO] No files to process found.")
         return
     
-    print(f"[INFO] 처리할 파일 목록 ({len(target_files)}개):")
+    print(f"[INFO] Files to process ({len(target_files)}):")
     for file in target_files:
         print(f"   - {os.path.basename(file)}")
     print()
     
-    # 사용자 확인
-    response = input("계속하시겠습니까? (y/N): ").strip().lower()
+    # User confirmation
+    response = input("Continue? (y/N): ").strip().lower()
     if response not in ['y', 'yes']:
-        print("[INFO] 취소되었습니다.")
+        print("[INFO] Cancelled.")
         return
     
-    print("\n[INFO] 라이선스 헤더 추가 중...")
+    print("\n[INFO] Adding license headers...")
     print("-" * 30)
     
     success_count = 0
@@ -133,17 +146,17 @@ def main():
             skip_count += 1
     
     print("-" * 30)
-    print("[INFO] 처리 결과:")
-    print(f"   [INFO] 성공: {success_count}개")
-    print(f"   [INFO] 건너뜀: {skip_count}개")
-    print(f"   [ERROR] 오류: {error_count}개")
+    print("[INFO] Processing results:")
+    print(f"   [INFO] Success: {success_count}")
+    print(f"   [INFO] Skipped: {skip_count}")
+    print(f"   [ERROR] Errors: {error_count}")
     print()
     
     if success_count > 0:
-        print("[INFO] 백업 파일이 .backup 확장자로 생성되었습니다.")
-        print("   문제가 없으면 백업 파일을 삭제하세요.")
+        print("[INFO] Backup files created with .backup extension.")
+        print("   Delete backup files if everything is OK.")
     
-    print("[INFO] 완료!")
+    print("[INFO] Complete!")
 
 if __name__ == "__main__":
     main() 
