@@ -272,3 +272,6 @@ config.local.*
 temp/
 tmp/
 cache/
+
+# 프로그램 실행 산출물들
+*_data/
