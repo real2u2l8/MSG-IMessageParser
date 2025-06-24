@@ -1,3 +1,11 @@
+//
+// 프로젝트 최상위 헤더 (pch.h)
+// 원칙:
+// 1. 자주 사용되는 헤더들만 포함
+// 2. 변경이 적은 헤더들만 포함
+// 3. 프로젝트 전체에서 공통으로 사용되는 헤더들만 포함
+// 4. 특정 기능에만 사용되는 헤더는 포함하지 않음
+
 #pragma once
 
 // Windows OLE/COM related headers
@@ -29,7 +37,6 @@
 #include <chrono>
 #include <iomanip>
 #include <memory>
-#include <regex>
 
 // C Standard Library
 #include <stdarg.h>
@@ -45,7 +52,6 @@
 #include <io.h>
 
 // For Unicode support
-#include <codecvt>
 #include <locale>
 
 // Project Header
