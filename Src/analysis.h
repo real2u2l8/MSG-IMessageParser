@@ -1,621 +1,84 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 #include "pch.h"
+#include "msgparser.h"
+#include "mapiparser.h"
+#include "filehandle.h"
 
-// Outlook Mail .msg ÆÄÀÏ °ü·Ã »ó¼ö Á¤ÀÇ
-// ¿©±â¼­ Substg¸¦ È®ÀÎÇÒ ¼ö ÀÖ´Ù. by. real.hansy
-// https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxmsg/621801cb-b617-474c-bce6-69037d73461a
-// http://www.five-ten-sg.com/libpst/rn01re06.html
-// OutLook MailÀÇ .msg ÆÄÀÏ ±¸Á¶¸¦ Âü°íÇÏ¿© ÀÛ¼ºÇÏ¿´´Ù.
-// KESM_OutMail.exe¿¡¼­ ÀÌ ±¸Á¶·Î .msg ÆÄÀÏÀ» ºĞ¼®ÇÏ¿© Á¤º¸¸¦ ÃßÃâÇÑ´Ù.
-// »ó¼ö Á¤ÀÇ ºÎºĞ
+// MSG íŒŒì¼ ë‚´ë¶€ ìŠ¤í† ë¦¬ì§€/ìŠ¤íŠ¸ë¦¼ ì´ë¦„ ì •ì˜
+#define		SUBSTG_SENDER		L"__substg1.0_0C1F"		// ë°œì‹ ì ì •ë³´
+#define		SUBSTG_TO			L"__substg1.0_0E04"		// ìˆ˜ì‹ ì (TO)
+#define		SUBSTG_CC			L"__substg1.0_0E03"		// ì°¸ì¡° (CC)
+#define		SUBSTG_BCC			L"__substg1.0_0E02"		// ìˆ¨ì€ì°¸ì¡° (BCC)
+#define		SUBSTG_SUBJECT		L"__substg1.0_0037"		// ì œëª©
+#define		SUBSTG_BODY			L"__substg1.0_1000"		// ë³¸ë¬¸ (í…ìŠ¤íŠ¸)
+#define		SUBSTG_HTML_BODY	L"__substg1.0_1013"		// ë³¸ë¬¸ (HTML)
+#define		SUBSTG_RTF_BODY		L"__substg1.0_1009"		// ë³¸ë¬¸ (RTF)
+#define		SUBSTG_ATTACHMENTS	L"__attach_"				// ì²¨ë¶€íŒŒì¼
+#define		SUBSTG_RECIPIENTS	L"__recip_version1.0_"	// ìˆ˜ì‹ ì ëª©ë¡
+#define		SUBSTG_PROPERTIES	L"__properties_version1.0"	// MAPI ì†ì„±
 
-// ±âº» Substg »ó¼öµé
-#define		SUBSTG_SENDER		L"__substg1.0_0C1F"		// PR_SENDER_EMAIL_ADDRESS_W:	¹ß½ÅÀÚÀÇ ÀÌ¸ŞÀÏ ÁÖ¼Ò (Exchange ¼­¹ö °ü·Ã »ó¼ö)
-#define		SUBSTG_TO			L"__substg1.0_0E04"		// PR_DISPLAY_TO_W:				¼ö½ÅÀÚ(To) ÀüÃ¼ Ç¥½Ã ¹®ÀÚ¿­,	ÁÖ¼Ò°¡ ¾Æ´Ñ ÀÌ¸§¸¸
-#define		SUBSTG_CC			L"__substg1.0_0E03"		// PR_DISPLAY_CC_W:				ÂüÁ¶(CC) ÀüÃ¼ Ç¥½Ã ¹®ÀÚ¿­		ÁÖ¼Ò°¡ ¾Æ´Ñ ÀÌ¸§¸¸
-#define		SUBSTG_BCC			L"__substg1.0_0E02"		// PR_DISPLAY_BCC_W:			¼ûÀºÂüÁ¶(BCC) ÀüÃ¼ Ç¥½Ã ¹®ÀÚ¿­	ÁÖ¼Ò°¡ ¾Æ´Ñ ÀÌ¸§¸¸
-#define		SUBSTG_SUBJECT		L"__substg1.0_0037"		// PR_SUBJECT_W:				¸ŞÀÏ Á¦¸ñ
-#define		SUBSTG_BODY			L"__substg1.0_1000"		// PR_BODY_W:					¸ŞÀÏ ³»¿ë (ÅØ½ºÆ®)
-#define		SUBSTG_HEADER		L"__substg1.0_007D"		// PR_SUBJECT_PREFIX:			¸ŞÀÏ Á¦¸ñ ¾Õ Á¢µÎ»ç ("RE:", "FW:" µî)
+// MAPI ì†ì„± íƒœê·¸ ì •ì˜
+#define		PR_RECIPIENT_TYPE	0x0C15		// ìˆ˜ì‹ ì íƒ€ì…
+#define		PR_DISPLAY_NAME		0x3001		// í‘œì‹œ ì´ë¦„
+#define		PR_SMTP_ADDRESS		0x5D01		// SMTP ì£¼ì†Œ
+#define		PR_EMAIL_ADDRESS	0x3003		// ì´ë©”ì¼ ì£¼ì†Œ
+#define		PR_ADDRTYPE			0x3002		// ì£¼ì†Œ íƒ€ì…
+#define		PR_ENTRYID			0x0FFF		// í•­ëª© ID
+#define		PR_SEARCH_KEY		0x300B		// ê²€ìƒ‰ í‚¤
 
-// ¸ŞÀÎ µğ·ºÅä¸®µé
-#define     MAIL_MAIN			L"__nameid_version"		// Named PropertyÀÇ ÀÌ¸§-GUID-Tag ¸ÅÇÎ Á¤º¸¸¦ ÀúÀåÇÏ´Â ¸ŞÀÎ µğ·ºÅä¸®
-#define     MAIL_SUBTO			L"__recip_version"		// °¢ ¼ö½ÅÀÚ(TO/CC/BCC)ÀÇ Recipient Table µğ·ºÅä¸®
-#define		MAIL_PROPERTY		L"__properties_version"	// ¸ŞÀÏ µğ·ºÅä¸®ÀÇ ¸ğµç ¼Ó¼º Á¤º¸¸¦ ÀúÀåÇÏ´Â µğ·ºÅä¸®
-#define     MAIL_ATTACH			L"__attach_version"		// Ã·ºÎÆÄÀÏÀÇ ¸ğµç ¼Ó¼º Á¤º¸¸¦ ÀúÀåÇÏ´Â Attach µğ·ºÅä¸®
+// MAPI ì†ì„± íƒ€ì… ì •ì˜
+#define		PT_UNSPECIFIED		0x0000		// ë¯¸ì§€ì •
+#define		PT_NULL				0x0001		// NULL
+#define		PT_I2				0x0002		// 16ë¹„íŠ¸ ì •ìˆ˜
+#define		PT_LONG				0x0003		// 32ë¹„íŠ¸ ì •ìˆ˜
+#define		PT_R4				0x0004		// 32ë¹„íŠ¸ ì‹¤ìˆ˜
+#define		PT_DOUBLE			0x0005		// 64ë¹„íŠ¸ ì‹¤ìˆ˜
+#define		PT_CURRENCY			0x0006		// í†µí™”
+#define		PT_APPTIME			0x0007		// ì‹œê°„
+#define		PT_ERROR			0x000A		// ì˜¤ë¥˜
+#define		PT_BOOLEAN			0x000B		// ë¶ˆë¦°
+#define		PT_OBJECT			0x000D		// ê°ì²´
+#define		PT_I8				0x0014		// 64ë¹„íŠ¸ ì •ìˆ˜
+#define		PT_STRING8			0x001E		// 8ë¹„íŠ¸ ë¬¸ìì—´
+#define		PT_UNICODE			0x001F		// ìœ ë‹ˆì½”ë“œ ë¬¸ìì—´
+#define		PT_SYSTIME			0x0040		// ì‹œìŠ¤í…œ ì‹œê°„
+#define		PT_CLSID			0x0048		// GUID
+#define		PT_BINARY			0x0102		// ë°”ì´ë„ˆë¦¬ ë°ì´í„°
 
-// __attach_version ÇÏÀ§ Æ®¸®
-#define		SUBSTG_ATTACHDISPLAY	L"__substg1.0_3001"		// PR_DISPLAY_NAME_W:        Ã·ºÎÆÄÀÏ Ç¥½Ã ÀÌ¸§
-#define		SUBSTG_ATTACHNAME		L"__substg1.0_3707"		// PR_ATTACH_LONG_FILENAME_W: Ã·ºÎÆÄÀÏ ½ÇÁ¦ ÀÌ¸§ (ÀüÃ¼ °æ·Î)
-#define		SUBSTG_ATTACHDATA		L"__substg1.0_3701"		// PR_ATTACH_DATA_BIN:        Ã·ºÎÆÄÀÏ µ¥ÀÌÅÍ¸¦ ÀúÀåÇÏ´Â
+// ì²¨ë¶€íŒŒì¼ ê´€ë ¨ ìŠ¤í† ë¦¬ì§€ ì´ë¦„
+#define		SUBSTG_ATTACHDISPLAY	L"__substg1.0_3001"		// ì²¨ë¶€íŒŒì¼ í‘œì‹œëª…
+#define		SUBSTG_ATTACHNAME		L"__substg1.0_3707"		// ì²¨ë¶€íŒŒì¼ ì´ë¦„
+#define		SUBSTG_ATTACHDATA		L"__substg1.0_3701"		// ì²¨ë¶€íŒŒì¼ ë°ì´í„°
 
-// Æ¯º° »ó¼öµé
-#define		SUBSTG_ADDRTYPE		    L"__substg1.0_3002"		// PR_ADDRTYPE_W:             ÁÖ¼Ò Å¸ÀÔ (SMTP, EX µî)
-#define		SUBSTG_SENDER_ADDRTYPE	L"__substg1.0_0C1E"		// PR_SENDER_ADDRTYPE_W:      ¹ß½ÅÀÚ ÁÖ¼Ò Å¸ÀÔ (SMTP, EX µî)
-#define		SUBSTG_SMTPADDRESS		L"__substg1.0_39FE"		// PR_SMTP_ADDRESS_W:         EX Å¸ÀÔÀÇ ½ÇÁ¦ ÀÌ¸ŞÀÏ ÁÖ¼Ò
-#define		SUBSTG_SUBTO		    L"__substg1.0_3003"		// PR_EMAIL_ADDRESS_W:        ¼ö½ÅÀÚ ÀÌ¸ŞÀÏ ÁÖ¼Ò
-#define		SUBSTG_RECIPIENT_TYPE	L"__substg1.0_0C15"		// PR_RECIPIENT_TYPE:		¼ö½ÅÀÚ ±¸ºĞ Á¤º¸ (To, Cc, Bcc)
+// ì£¼ì†Œ ê´€ë ¨ ìŠ¤í† ë¦¬ì§€ ì´ë¦„
+#define		SUBSTG_ADDRTYPE		    L"__substg1.0_3002"		// ì£¼ì†Œ íƒ€ì…
+#define		SUBSTG_SENDER_ADDRTYPE	L"__substg1.0_0C1E"		// ë°œì‹ ì ì£¼ì†Œ íƒ€ì…
+#define		SUBSTG_SMTPADDRESS		L"__substg1.0_39FE"		// SMTP ì£¼ì†Œ
+#define		SUBSTG_SUBTO		    L"__substg1.0_3003"		// ìˆ˜ì‹ ì ì£¼ì†Œ
+#define		SUBSTG_RECIPIENT_TYPE	L"__substg1.0_0C15"		// ìˆ˜ì‹ ì íƒ€ì…
 
-// _recip_version ÇÏÀ§ »ó¼ö
-#define		RECIP_TYPE_TO			1       // ¼ö½ÅÀÚ(To)
-#define		RECIP_TYPE_CC			2       // ÂüÁ¶(Cc)
-#define		RECIP_TYPE_BCC			3       // ¼ûÀºÂüÁ¶(Bcc)
+// ìˆ˜ì‹ ì íƒ€ì… ìƒìˆ˜
+#define		RECIP_TYPE_TO			1		// ìˆ˜ì‹ ì (TO)
+#define		RECIP_TYPE_CC			2		// ì°¸ì¡° (CC)
+#define		RECIP_TYPE_BCC			3		// ìˆ¨ì€ì°¸ì¡° (BCC)
 
-#define		MAX_RECIPIENT_ADDR_LEN	256  // TO/CC/BCC ¹öÆÛ±æÀÌ
-
-
-// MSG ÆÄÀÏ ÆÄ½Ì °ü·Ã ÇÔ¼ö ¼±¾ğµé
-/**
- * @brief MSG ÆÄÀÏ ÆÄ½ÌÀ» ´ã´çÇÏ´Â ¸ŞÀÎ Å¬·¡½º
- *
- * @details
- * ÀÌ Å¬·¡½º´Â Outlook .msg ÆÄÀÏÀÇ ±¸Á¶¸¦ ºĞ¼®ÇÏ°í ³»ºÎ µ¥ÀÌÅÍ¸¦ ÃßÃâÇÏ´Â ±â´ÉÀ» Á¦°øÇÕ´Ï´Ù.
- * IStorage ÀÎÅÍÆäÀÌ½º¸¦ »ç¿ëÇÏ¿© MSG ÆÄÀÏÀÇ °èÃşÀû ±¸Á¶¸¦ Å½»öÇÏ°í,
- * °¢ ½ºÆ®¸²ÀÇ µ¥ÀÌÅÍ¸¦ hex ÇüÅÂ·Î ÀúÀåÇÕ´Ï´Ù.
- *
- * @note
- * - COM ÃÊ±âÈ­/ÇØÁ¦¸¦ ÀÚµ¿À¸·Î Ã³¸®ÇÕ´Ï´Ù.
- * - Àç±ÍÀû Å½»öÀ» ÅëÇØ ¸ğµç ÇÏÀ§ ½ºÅä¸®Áö¿Í ½ºÆ®¸²À» Ã³¸®ÇÕ´Ï´Ù.
- * - ¾ÈÀüÇÑ ÆÄÀÏ¸í »ı¼º ¹× µğ·ºÅä¸® »ı¼ºÀ» Áö¿øÇÕ´Ï´Ù.
- *
- * @see https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxmsg/621801cb-b617-474c-bce6-69037d73461a
- */
-class MSGParser {
-public:
-    /**
-     * @brief MSGParser »ı¼ºÀÚ
-     *
-     * @details
-     * MSGParser °´Ã¼¸¦ ÃÊ±âÈ­ÇÏ°í COM ¶óÀÌºê·¯¸®¸¦ ÃÊ±âÈ­ÇÕ´Ï´Ù.
-     * ÆÄÀÏ Ä«¿îÅÍ¿Í ¿¡·¯ Ä«¿îÅÍ¸¦ 0À¸·Î ¼³Á¤ÇÕ´Ï´Ù.
-     */
-    MSGParser();
-    
-    /**
-     * @brief MSGParser ¼Ò¸êÀÚ
-     *
-     * @details
-     * ¸ğµç ¸®¼Ò½º¸¦ Á¤¸®ÇÏ°í COM ¶óÀÌºê·¯¸®¸¦ ÇØÁ¦ÇÕ´Ï´Ù.
-     * Á¤¸® °úÁ¤À» ·Î±×·Î ±â·ÏÇÕ´Ï´Ù.
-     */
-    ~MSGParser();
-    
-    /**
-     * @brief MSG ÆÄÀÏÀ» ÆÄ½ÌÇÏ¿© Ãâ·Â µğ·ºÅä¸®¿¡ ±¸Á¶¸¦ ÀúÀå
-     *
-     * @param[in] filePath ÆÄ½ÌÇÒ MSG ÆÄÀÏÀÇ °æ·Î
-     * @param[in] outputDir °á°ú¸¦ ÀúÀåÇÒ Ãâ·Â µğ·ºÅä¸® °æ·Î
-     * @return true ÆÄ½Ì ¼º°ø, false ÆÄ½Ì ½ÇÆĞ
-     *
-     * @details
-     * ÁöÁ¤µÈ MSG ÆÄÀÏÀ» ¿­¾î¼­ ³»ºÎ ±¸Á¶¸¦ ºĞ¼®ÇÕ´Ï´Ù.
-     * ¸ğµç ½ºÅä¸®Áö¿Í ½ºÆ®¸²À» Àç±ÍÀûÀ¸·Î Å½»öÇÏ¿© Ãâ·Â µğ·ºÅä¸®¿¡ ÀúÀåÇÕ´Ï´Ù.
-     * °¢ ½ºÆ®¸²Àº hex ÆÄÀÏ ÇüÅÂ·Î ÀúÀåµË´Ï´Ù.
-     *
-     * @note
-     * - Ãâ·Â µğ·ºÅä¸®°¡ Á¸ÀçÇÏÁö ¾ÊÀ¸¸é ÀÚµ¿À¸·Î »ı¼ºÇÕ´Ï´Ù.
-     * - ÆÄÀÏ Á¢±Ù ±ÇÇÑ ¹®Á¦°¡ ÀÖÀ» °æ¿ì ´Ù¾çÇÑ Á¢±Ù ¸ğµå·Î Àç½ÃµµÇÕ´Ï´Ù.
-     * - Ã³¸®µÈ ÆÄÀÏ ¼ö¿Í ¿¡·¯ ¼ö¸¦ ³»ºÎÀûÀ¸·Î ÃßÀûÇÕ´Ï´Ù.
-     */
-    bool ParseMSGFile(const std::wstring& filePath, const std::wstring& outputDir);
-    
-private:
-    /**
-     * @brief ½ºÅä¸®Áö¸¦ Àç±ÍÀûÀ¸·Î Å½»öÇÏ¿© ¸ğµç ¿ä¼Ò¸¦ Ã³¸®
-     *
-     * @param[in] pStorage Å½»öÇÒ IStorage Æ÷ÀÎÅÍ
-     * @param[in] currentPath ÇöÀç Å½»ö ÁßÀÎ °æ·Î (µğ¹ö±ë¿ë)
-     * @param[in] outputDir ÇöÀç ·¹º§ÀÇ Ãâ·Â µğ·ºÅä¸®
-     *
-     * @details
-     * IStorageÀÇ ¸ğµç ¿ä¼Ò(½ºÅä¸®Áö¿Í ½ºÆ®¸²)¸¦ ¿­°ÅÇÏ¿© Ã³¸®ÇÕ´Ï´Ù.
-     * ½ºÅä¸®ÁöÀÎ °æ¿ì ÇÏÀ§ µğ·ºÅä¸®¸¦ »ı¼ºÇÏ°í Àç±ÍÀûÀ¸·Î Å½»öÇÕ´Ï´Ù.
-     * ½ºÆ®¸²ÀÎ °æ¿ì hex ÆÄÀÏ·Î ÀúÀåÇÕ´Ï´Ù.
-     *
-     * @note
-     * - ¸Ş¸ğ¸® ´©¼ö¸¦ ¹æÁöÇÏ±â À§ÇØ STATSTG ±¸Á¶Ã¼ÀÇ pwcsNameÀ» ÀûÀıÈ÷ ÇØÁ¦ÇÕ´Ï´Ù.
-     * - Á¢±Ù ±ÇÇÑ ¹®Á¦°¡ ÀÖÀ» °æ¿ì ´Ù¾çÇÑ Á¢±Ù ¸ğµå·Î Àç½ÃµµÇÕ´Ï´Ù.
-     */
-    void TraverseStorage(IStorage* pStorage, const std::wstring& currentPath, const std::wstring& outputDir);
-    
-    /**
-     * @brief ½ºÆ®¸² µ¥ÀÌÅÍ¸¦ hex ÇüÅÂ·Î º¯È¯ÇÏ¿© ÆÄÀÏ¿¡ ÀúÀå
-     *
-     * @param[in] pStream ÀúÀåÇÒ IStream Æ÷ÀÎÅÍ
-     * @param[in] outputPath ÀúÀåÇÒ ÆÄÀÏ °æ·Î (.hex È®ÀåÀÚ Æ÷ÇÔ)
-     * @return true ÀúÀå ¼º°ø, false ÀúÀå ½ÇÆĞ
-     *
-     * @details
-     * IStreamÀÇ ¸ğµç µ¥ÀÌÅÍ¸¦ ÀĞ¾î¼­ hex ¹®ÀÚ¿­·Î º¯È¯ÇÑ ÈÄ ÆÄÀÏ¿¡ ÀúÀåÇÕ´Ï´Ù.
-     * 16¹ÙÀÌÆ®¸¶´Ù ÁÙ¹Ù²ŞÀ» Ãß°¡ÇÏ¿© °¡µ¶¼ºÀ» ³ôÀÔ´Ï´Ù.
-     *
-     * @note
-     * - ºó ½ºÆ®¸²Àº °Ç³Ê¶İ´Ï´Ù.
-     * - ½ºÆ®¸² Å©±â°¡ 0ÀÎ °æ¿ì ¼º°øÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
-     */
-    bool SaveStreamAsHex(IStream* pStream, const std::wstring& outputPath);
-    
-    /**
-     * @brief ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ hex ¹®ÀÚ¿­·Î º¯È¯
-     *
-     * @param[in] data º¯È¯ÇÒ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ Æ÷ÀÎÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â (¹ÙÀÌÆ®)
-     * @return hex ¹®ÀÚ¿­·Î º¯È¯µÈ µ¥ÀÌÅÍ
-     *
-     * @details
-     * ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ 16Áø¼ö ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * 16¹ÙÀÌÆ®¸¶´Ù ÁÙ¹Ù²ŞÀ» Ãß°¡ÇÏ°í, ¹ÙÀÌÆ® »çÀÌ¿¡ °ø¹éÀ» »ğÀÔÇÕ´Ï´Ù.
-     * ´ë¹®ÀÚ hex Çü½ÄÀ» »ç¿ëÇÕ´Ï´Ù.
-     *
-     * @example
-     * @code
-     * BYTE data[] = {0x48, 0x65, 0x6C, 0x6C, 0x6F};
-     * std::string hex = BinaryToHexString(data, 5);
-     * // °á°ú: "48 65 6C 6C 6F"
-     * @endcode
-     */
-    std::string BinaryToHexString(const BYTE* data, DWORD size);
-    
-    /**
-     * @brief ¾ÈÀüÇÑ ÆÄÀÏ¸í »ı¼º (Æ¯¼ö¹®ÀÚ Ã³¸®)
-     *
-     * @param[in] originalName ¿øº» ÆÄÀÏ¸í
-     * @return ¾ÈÀüÇÑ ÆÄÀÏ¸í
-     *
-     * @details
-     * Windows ÆÄÀÏ¸í¿¡¼­ »ç¿ëÇÒ ¼ö ¾ø´Â Æ¯¼ö¹®ÀÚµéÀ» ¾ğ´õ½ºÄÚ¾î·Î º¯°æÇÕ´Ï´Ù.
-     * ÆÄÀÏ¸íÀÌ ³Ê¹« ±æ °æ¿ì 200ÀÚ·Î ÀÚ¸¨´Ï´Ù.
-     *
-     * @note
-     * º¯°æµÇ´Â ¹®ÀÚ: < > : " / \ | ? *
-     */
-    std::wstring MakeSafeFileName(const std::wstring& originalName);
-    
-    /**
-     * @brief µğ·ºÅä¸®¸¦ Àç±ÍÀûÀ¸·Î »ı¼º
-     *
-     * @param[in] path »ı¼ºÇÒ µğ·ºÅä¸® °æ·Î
-     * @return true »ı¼º ¼º°ø ¶Ç´Â ÀÌ¹Ì Á¸Àç, false »ı¼º ½ÇÆĞ
-     *
-     * @details
-     * ÁöÁ¤µÈ °æ·ÎÀÇ ¸ğµç »óÀ§ µğ·ºÅä¸®¸¦ Æ÷ÇÔÇÏ¿© µğ·ºÅä¸®¸¦ »ı¼ºÇÕ´Ï´Ù.
-     * ÀÌ¹Ì Á¸ÀçÇÏ´Â µğ·ºÅä¸®´Â ¼º°øÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
-     *
-     * @note
-     * - Windows APIÀÇ CreateDirectoryW¸¦ »ç¿ëÇÕ´Ï´Ù.
-     * - ERROR_ALREADY_EXISTS ¿¡·¯´Â ¼º°øÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
-     */
-    bool CreateDirectoryRecursive(const std::wstring& path);
-    
-    /**
-     * @brief Á¤º¸ ¸Ş½ÃÁö¸¦ ÄÜ¼Ö¿¡ Ãâ·Â
-     *
-     * @param[in] message Ãâ·ÂÇÒ ¸Ş½ÃÁö
-     *
-     * @details
-     * [INFO] Á¢µÎ»ç¿Í ÇÔ²² ¸Ş½ÃÁö¸¦ Ç¥ÁØ Ãâ·Â¿¡ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogMessage(const std::wstring& message);
-    
-    /**
-     * @brief ¿¡·¯ ¸Ş½ÃÁö¸¦ ÄÜ¼Ö¿¡ Ãâ·Â
-     *
-     * @param[in] error Ãâ·ÂÇÒ ¿¡·¯ ¸Ş½ÃÁö
-     *
-     * @details
-     * [ERROR] Á¢µÎ»ç¿Í ÇÔ²² ¸Ş½ÃÁö¸¦ Ç¥ÁØ ¿¡·¯ Ãâ·Â¿¡ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogError(const std::wstring& error);
-    
-private:
-    std::wstring m_outputBaseDir;  ///< Ãâ·Â ±âº» µğ·ºÅä¸® °æ·Î
-    int m_fileCount;               ///< Ã³¸®µÈ ÆÄÀÏ ¼ö
-    int m_errorCount;              ///< ¹ß»ıÇÑ ¿¡·¯ ¼ö
-};
-
-// MAPI Property Types
-#define PT_UNSPECIFIED     0x0000
-#define PT_NULL            0x0001
-#define PT_I2              0x0002  // 16-bit integer
-#define PT_LONG            0x0003  // 32-bit integer
-#define PT_R4              0x0004  // 4-byte floating point
-#define PT_DOUBLE          0x0005  // 8-byte floating point
-#define PT_CURRENCY        0x0006  // 8-byte currency
-#define PT_APPTIME         0x0007  // 8-byte application time
-#define PT_ERROR           0x000A  // 32-bit error code
-#define PT_BOOLEAN         0x000B  // 16-bit boolean
-#define PT_OBJECT          0x000D  // Embedded object
-#define PT_I8              0x0014  // 8-byte integer
-#define PT_STRING8         0x001E  // 8-bit character string
-#define PT_UNICODE         0x001F  // Unicode string
-#define PT_SYSTIME         0x0040  // 8-byte system time
-#define PT_CLSID           0x0048  // 16-byte GUID
-#define PT_BINARY          0x0102  // Binary data
-#define PT_MV_I2           0x1002  // Multi-value 16-bit integer
-#define PT_MV_LONG         0x1003  // Multi-value 32-bit integer
-#define PT_MV_R4           0x1004  // Multi-value 4-byte float
-#define PT_MV_DOUBLE       0x1005  // Multi-value 8-byte float
-#define PT_MV_CURRENCY     0x1006  // Multi-value currency
-#define PT_MV_APPTIME      0x1007  // Multi-value application time
-#define PT_MV_SYSTIME      0x1040  // Multi-value system time
-#define PT_MV_STRING8      0x101E  // Multi-value 8-bit string
-#define PT_MV_UNICODE      0x101F  // Multi-value Unicode string
-#define PT_MV_CLSID        0x1048  // Multi-value GUID
-#define PT_MV_BINARY       0x1102  // Multi-value binary
-
-// MAPI Property Tags (ÁÖ¿ä ÅÂ±×µé)
-#define PR_RECIPIENT_TYPE          0x0C15  // ¼ö½ÅÀÚ Å¸ÀÔ (To, Cc, Bcc)
-#define PR_DISPLAY_NAME            0x3001  // Ç¥½Ã ÀÌ¸§
-#define PR_SMTP_ADDRESS            0x39FE  // SMTP ÁÖ¼Ò
-#define PR_EMAIL_ADDRESS           0x3003  // ÀÌ¸ŞÀÏ ÁÖ¼Ò
-#define PR_ADDRTYPE                0x3002  // ÁÖ¼Ò Å¸ÀÔ
-#define PR_ENTRYID                 0x0FFF  // Entry ID
-#define PR_SEARCH_KEY              0x300B  // °Ë»ö Å°
-#define PR_TRANSMITABLE_DISPLAY_NAME 0x3001  // Àü¼Û °¡´ÉÇÑ Ç¥½Ã ÀÌ¸§
-
-/**
- * @brief MAPI Property Á¤ÀÇ ±¸Á¶Ã¼
- *
- * @details
- * MAPI Property Stream¿¡¼­ °¢ ¼Ó¼ºÀÇ Á¤ÀÇ Á¤º¸¸¦ ÀúÀåÇÏ´Â ±¸Á¶Ã¼ÀÔ´Ï´Ù.
- * 16¹ÙÀÌÆ® ´ÜÀ§·Î ±¸¼ºµÇ¸ç, Property Tag, Type, Offset, Size Á¤º¸¸¦ Æ÷ÇÔÇÕ´Ï´Ù.
- *
- * @note
- * ÀÌ ±¸Á¶Ã¼´Â MSG ÆÄÀÏÀÇ __properties_version ½ºÆ®¸²¿¡¼­ »ç¿ëµË´Ï´Ù.
- */
-typedef struct _PROPERTY_DEFINITION {
-    WORD    PropertyTag;      ///< Property Tag (2 bytes) - ¼Ó¼º ID¿Í Å¸ÀÔÀ» Á¶ÇÕÇÑ °ª
-    WORD    PropertyType;     ///< Property Type (2 bytes) - µ¥ÀÌÅÍ Å¸ÀÔ (PT_STRING8, PT_UNICODE µî)
-    DWORD   Offset;           ///< Value offset from start of value section (4 bytes) - °ª ¼½¼Ç ³» ¿ÀÇÁ¼Â
-    DWORD   Size;             ///< Value size in bytes (4 bytes) - °ªÀÇ Å©±â
-} PROPERTY_DEFINITION, *PPROPERTY_DEFINITION;
-
-/**
- * @brief MAPI Property °ª ±¸Á¶Ã¼
- *
- * @details
- * ÆÄ½ÌµÈ MAPI PropertyÀÇ ½ÇÁ¦ °ªÀ» ÀúÀåÇÏ´Â ±¸Á¶Ã¼ÀÔ´Ï´Ù.
- * Property Tag, Type, Size Á¤º¸¿Í ÇÔ²² ½ÇÁ¦ µ¥ÀÌÅÍ Æ÷ÀÎÅÍ¸¦ Æ÷ÇÔÇÕ´Ï´Ù.
- *
- * @note
- * Data Æ÷ÀÎÅÍ´Â µ¿ÀûÀ¸·Î ÇÒ´çµÇ¹Ç·Î »ç¿ë ÈÄ ¹İµå½Ã ÇØÁ¦ÇØ¾ß ÇÕ´Ï´Ù.
- */
-typedef struct _PROPERTY_VALUE {
-    WORD    PropertyTag;      ///< Property Tag - ¼Ó¼º ID
-    WORD    PropertyType;     ///< Property Type - µ¥ÀÌÅÍ Å¸ÀÔ
-    DWORD   Size;             ///< Value size - µ¥ÀÌÅÍ Å©±â
-    BYTE*   Data;             ///< Value data pointer - ½ÇÁ¦ µ¥ÀÌÅÍ Æ÷ÀÎÅÍ
-} PROPERTY_VALUE, *PPROPERTY_VALUE;
-
-/**
- * @brief RAII ÆÄÀÏ ÇÚµé ·¡ÆÛ Å¬·¡½º
- *
- * @details
- * ÆÄÀÏ ÇÚµéÀÇ ÀÚµ¿ °ü¸®¸¦ À§ÇÑ RAII(Resource Acquisition Is Initialization) ÆĞÅÏÀ» ±¸ÇöÇÑ Å¬·¡½ºÀÔ´Ï´Ù.
- * »ı¼ºÀÚ¿¡¼­ ÆÄÀÏÀ» ¿­°í, ¼Ò¸êÀÚ¿¡¼­ ÀÚµ¿À¸·Î ÆÄÀÏÀ» ´İ½À´Ï´Ù.
- *
- * @note
- * - ¿¹¿Ü ¾ÈÀü¼ºÀ» º¸ÀåÇÕ´Ï´Ù.
- * - ÆÄÀÏ ÇÚµé ´©¼ö¸¦ ¹æÁöÇÕ´Ï´Ù.
- * - std::ifstreamÀ» ³»ºÎÀûÀ¸·Î »ç¿ëÇÕ´Ï´Ù.
- */
-class SafeFileHandle {
-public:
-    /**
-     * @brief SafeFileHandle »ı¼ºÀÚ
-     *
-     * @param[in] path ¿­ ÆÄÀÏ °æ·Î
-     * @param[in] mode ÆÄÀÏ ¿­±â ¸ğµå (±âº»°ª: std::ios::in)
-     *
-     * @details
-     * ÁöÁ¤µÈ °æ·ÎÀÇ ÆÄÀÏÀ» ÁöÁ¤µÈ ¸ğµå·Î ¿±´Ï´Ù.
-     * ÆÄÀÏ ¿­±â¿¡ ½ÇÆĞÇØµµ ¿¹¿Ü¸¦ ¹ß»ı½ÃÅ°Áö ¾Ê½À´Ï´Ù.
-     */
-    SafeFileHandle(const std::wstring& path, std::ios::openmode mode = std::ios::in);
-    
-    /**
-     * @brief SafeFileHandle ¼Ò¸êÀÚ
-     *
-     * @details
-     * ÆÄÀÏÀÌ ¿­·ÁÀÖ´Â °æ¿ì ÀÚµ¿À¸·Î ´İ½À´Ï´Ù.
-     */
-    ~SafeFileHandle();
-    
-    /**
-     * @brief ÆÄÀÏÀÌ ¿­·ÁÀÖ´ÂÁö È®ÀÎ
-     *
-     * @return true ÆÄÀÏÀÌ ¿­·ÁÀÖÀ½, false ÆÄÀÏÀÌ ´İÇôÀÖÀ½
-     */
-    bool is_open() const;
-    
-    /**
-     * @brief ³»ºÎ ÆÄÀÏ ½ºÆ®¸² ÂüÁ¶ ¹İÈ¯
-     *
-     * @return std::ifstream ÂüÁ¶
-     *
-     * @details
-     * ³»ºÎ std::ifstream °´Ã¼¿¡ ´ëÇÑ ÂüÁ¶¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
-     * ÆÄÀÏ ÀĞ±â ÀÛ¾÷¿¡ »ç¿ëÇÒ ¼ö ÀÖ½À´Ï´Ù.
-     */
-    std::ifstream& get();
-    
-private:
-    std::wstring m_path;          ///< ÆÄÀÏ °æ·Î
-    std::ios::openmode m_mode;    ///< ÆÄÀÏ ¿­±â ¸ğµå
-    std::ifstream m_file;         ///< ³»ºÎ ÆÄÀÏ ½ºÆ®¸² °´Ã¼
-};
-
-/**
- * @brief MAPI Property Stream ÆÄ½ÌÀ» ´ã´çÇÏ´Â Å¬·¡½º
- *
- * @details
- * MSG ÆÄÀÏÀÇ MAPI Property StreamÀ» ÆÄ½ÌÇÏ¿© °³º° ¼Ó¼ºµéÀ» ÃßÃâÇÏ°í ÇØ¼®ÇÏ´Â Å¬·¡½ºÀÔ´Ï´Ù.
- * 16¹ÙÀÌÆ® ´ÜÀ§ÀÇ Property DefinitionÀ» ºĞ¼®ÇÏ°í, Value Section¿¡¼­ ½ÇÁ¦ µ¥ÀÌÅÍ¸¦ ÃßÃâÇÕ´Ï´Ù.
- * ´Ù¾çÇÑ µ¥ÀÌÅÍ Å¸ÀÔ(String8, Unicode, Long, Binary µî)À» Áö¿øÇÕ´Ï´Ù.
- *
- * @note
- * - µğ¹ö±× ·Î±ë ±â´ÉÀ» Æ÷ÇÔÇÕ´Ï´Ù.
- * - ¸Ş¸ğ¸® °ü¸®¸¦ ÀÚµ¿À¸·Î Ã³¸®ÇÕ´Ï´Ù.
- * - ´Ù¾çÇÑ MAPI Property Tag¿Í TypeÀ» Áö¿øÇÕ´Ï´Ù.
- *
- * @see https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxmsg/621801cb-b617-474c-bce6-69037d73461a
- */
-class MAPIPropertyParser {
-public:
-    /**
-     * @brief MAPIPropertyParser »ı¼ºÀÚ
-     *
-     * @details
-     * MAPIPropertyParser °´Ã¼¸¦ ÃÊ±âÈ­ÇÕ´Ï´Ù.
-     * µğ¹ö±× ·Î±ëÀ» È°¼ºÈ­ÇÏ°í ·Î±× ·¹º§À» 3(DEBUG)À¸·Î ¼³Á¤ÇÕ´Ï´Ù.
-     */
-    MAPIPropertyParser();
-    
-    /**
-     * @brief MAPIPropertyParser ¼Ò¸êÀÚ
-     *
-     * @details
-     * ¸ğµç µ¿ÀûÀ¸·Î ÇÒ´çµÈ Property Value µ¥ÀÌÅÍ¸¦ ÇØÁ¦ÇÕ´Ï´Ù.
-     * Á¤¸® °úÁ¤À» µğ¹ö±× ·Î±×·Î ±â·ÏÇÕ´Ï´Ù.
-     */
-    ~MAPIPropertyParser();
-    
-    /**
-     * @brief MAPI Property Stream µ¥ÀÌÅÍ¸¦ ÆÄ½Ì
-     *
-     * @param[in] streamData ÆÄ½ÌÇÒ ½ºÆ®¸² µ¥ÀÌÅÍ
-     * @return true ÆÄ½Ì ¼º°ø, false ÆÄ½Ì ½ÇÆĞ
-     *
-     * @details
-     * MAPI Property StreamÀÇ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ ºĞ¼®ÇÏ¿© °³º° ¼Ó¼ºµéÀ» ÃßÃâÇÕ´Ï´Ù.
-     * 16¹ÙÀÌÆ® ´ÜÀ§·Î Property DefinitionÀ» ÀĞ°í, Value Section¿¡¼­ ½ÇÁ¦ µ¥ÀÌÅÍ¸¦ ÃßÃâÇÕ´Ï´Ù.
-     *
-     * @note
-     * - ÃÖ¼Ò 16¹ÙÀÌÆ®ÀÇ µ¥ÀÌÅÍ°¡ ÇÊ¿äÇÕ´Ï´Ù.
-     * - Property Definition Section°ú Value SectionÀ» ±¸ºĞÇÏ¿© Ã³¸®ÇÕ´Ï´Ù.
-     * - °¢ ¼Ó¼ºÀÇ Å¸ÀÔ¿¡ µû¶ó ÀûÀıÇÑ ÇØ¼®À» ¼öÇàÇÕ´Ï´Ù.
-     */
-    bool ParsePropertiesStream(const std::vector<BYTE>& streamData);
-    
-    /**
-     * @brief ÁöÁ¤µÈ Property TagÀÇ ¹®ÀÚ¿­ °ª ¹İÈ¯
-     *
-     * @param[in] propertyTag Ã£À» Property Tag
-     * @return ¹®ÀÚ¿­ °ª (Ã£Áö ¸øÇÑ °æ¿ì ºó ¹®ÀÚ¿­)
-     *
-     * @details
-     * ÁöÁ¤µÈ Property Tag¿¡ ÇØ´çÇÏ´Â ¼Ó¼ºÀ» Ã£¾Æ¼­ ¹®ÀÚ¿­·Î ÇØ¼®ÇÏ¿© ¹İÈ¯ÇÕ´Ï´Ù.
-     * µ¥ÀÌÅÍ Å¸ÀÔ¿¡ µû¶ó ÀûÀıÇÑ º¯È¯À» ¼öÇàÇÕ´Ï´Ù.
-     */
-    std::wstring GetStringValue(WORD propertyTag);
-    
-    /**
-     * @brief ÁöÁ¤µÈ Property TagÀÇ 32ºñÆ® Á¤¼ö °ª ¹İÈ¯
-     *
-     * @param[in] propertyTag Ã£À» Property Tag
-     * @return 32ºñÆ® Á¤¼ö °ª (Ã£Áö ¸øÇÑ °æ¿ì 0)
-     *
-     * @details
-     * ÁöÁ¤µÈ Property Tag¿¡ ÇØ´çÇÏ´Â ¼Ó¼ºÀ» Ã£¾Æ¼­ 32ºñÆ® Á¤¼ö·Î ÇØ¼®ÇÏ¿© ¹İÈ¯ÇÕ´Ï´Ù.
-     * ÃÖ¼Ò 4¹ÙÀÌÆ®ÀÇ µ¥ÀÌÅÍ°¡ ÀÖ¾î¾ß ÇÕ´Ï´Ù.
-     */
-    DWORD GetLongValue(WORD propertyTag);
-    
-    /**
-     * @brief ÁöÁ¤µÈ Property TagÀÇ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ ¹İÈ¯
-     *
-     * @param[in] propertyTag Ã£À» Property Tag
-     * @return ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ º¤ÅÍ (Ã£Áö ¸øÇÑ °æ¿ì ºó º¤ÅÍ)
-     *
-     * @details
-     * ÁöÁ¤µÈ Property Tag¿¡ ÇØ´çÇÏ´Â ¼Ó¼ºÀ» Ã£¾Æ¼­ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ·Î ¹İÈ¯ÇÕ´Ï´Ù.
-     * std::vector<BYTE> ÇüÅÂ·Î ¹İÈ¯µË´Ï´Ù.
-     */
-    std::vector<BYTE> GetBinaryValue(WORD propertyTag);
-    
-    /**
-     * @brief ÆÄ½ÌµÈ ¸ğµç ¼Ó¼ºÀ» ÄÜ¼Ö¿¡ Ãâ·Â
-     *
-     * @details
-     * ÆÄ½ÌµÈ ¸ğµç MAPI Property¸¦ ÄÜ¼Ö¿¡ Ãâ·ÂÇÕ´Ï´Ù.
-     * °¢ ¼Ó¼ºÀÇ Tag, Type, Size, Value Á¤º¸¸¦ Ç¥½ÃÇÕ´Ï´Ù.
-     */
-    void PrintParsedProperties();
-    
-    /**
-     * @brief hex ÆÄÀÏ¿¡¼­ µ¥ÀÌÅÍ¸¦ ÀĞ¾î¼­ ÆÄ½Ì
-     *
-     * @param[in] hexFilePath ÀĞÀ» hex ÆÄÀÏ °æ·Î
-     * @return true ÆÄ½Ì ¼º°ø, false ÆÄ½Ì ½ÇÆĞ
-     *
-     * @details
-     * hex ÆÄÀÏÀÇ °¢ ÁÙÀ» ÀĞ¾î¼­ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ·Î º¯È¯ÇÑ ÈÄ ÆÄ½ÌÀ» ¼öÇàÇÕ´Ï´Ù.
-     * 2ÀÚ¸® hex °ªÀ» ¹ÙÀÌÆ®·Î º¯È¯ÇÏ¿© Ã³¸®ÇÕ´Ï´Ù.
-     *
-     * @note
-     * - °ø¹é ¹®ÀÚ´Â ÀÚµ¿À¸·Î Á¦°ÅµË´Ï´Ù.
-     * - Àß¸øµÈ hex °ªÀº °æ°í ·Î±×·Î ±â·ÏÇÏ°í °Ç³Ê¶İ´Ï´Ù.
-     */
-    bool ParseFromHexFile(const std::wstring& hexFilePath);
-    
-    /**
-     * @brief µğ¹ö±× ·Î±ë È°¼ºÈ­/ºñÈ°¼ºÈ­
-     *
-     * @param[in] enable true: È°¼ºÈ­, false: ºñÈ°¼ºÈ­
-     */
-    void EnableDebugLog(bool enable);
-    
-    /**
-     * @brief ·Î±× ·¹º§ ¼³Á¤
-     *
-     * @param[in] level ·Î±× ·¹º§ (0=Error, 1=Warning, 2=Info, 3=Debug)
-     */
-    void SetLogLevel(int level);
-    
-private:
-    /**
-     * @brief Property Value¸¦ ¹®ÀÚ¿­·Î ÇØ¼®
-     *
-     * @param[in] value ÇØ¼®ÇÒ Property Value
-     * @return ÇØ¼®µÈ ¹®ÀÚ¿­
-     *
-     * @details
-     * Property Type¿¡ µû¶ó ÀûÀıÇÑ ÇØ¼® ¹æ¹ıÀ» ¼±ÅÃÇÏ¿© ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * Áö¿øÇÏ´Â Å¸ÀÔ: PT_STRING8, PT_UNICODE, PT_LONG, PT_BINARY, PT_BOOLEAN
-     */
-    std::wstring InterpretValue(const PROPERTY_VALUE& value);
-    
-    /**
-     * @brief 8ºñÆ® ¹®ÀÚ¿­ µ¥ÀÌÅÍ¸¦ À¯´ÏÄÚµå·Î º¯È¯
-     *
-     * @param[in] data 8ºñÆ® ¹®ÀÚ¿­ µ¥ÀÌÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â
-     * @return º¯È¯µÈ À¯´ÏÄÚµå ¹®ÀÚ¿­
-     *
-     * @details
-     * 8ºñÆ® ¹®ÀÚ¿­(ANSI)À» À¯´ÏÄÚµå ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * Windows APIÀÇ MultiByteToWideChar¸¦ »ç¿ëÇÕ´Ï´Ù.
-     */
-    std::wstring InterpretString8(const BYTE* data, DWORD size);
-    
-    /**
-     * @brief À¯´ÏÄÚµå ¹®ÀÚ¿­ µ¥ÀÌÅÍ¸¦ ÇØ¼®
-     *
-     * @param[in] data À¯´ÏÄÚµå ¹®ÀÚ¿­ µ¥ÀÌÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â
-     * @return ÇØ¼®µÈ À¯´ÏÄÚµå ¹®ÀÚ¿­
-     *
-     * @details
-     * 2¹ÙÀÌÆ®¾¿ ±¸¼ºµÈ À¯´ÏÄÚµå ¹®ÀÚ¿­À» ÇØ¼®ÇÕ´Ï´Ù.
-     * size/2 °³ÀÇ ¹®ÀÚ·Î º¯È¯ÇÕ´Ï´Ù.
-     */
-    std::wstring InterpretUnicode(const BYTE* data, DWORD size);
-    
-    /**
-     * @brief ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ hex ¹®ÀÚ¿­·Î º¯È¯
-     *
-     * @param[in] data ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â
-     * @return hex ¹®ÀÚ¿­·Î º¯È¯µÈ µ¥ÀÌÅÍ
-     *
-     * @details
-     * ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ hex ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * ÃÖ´ë 16¹ÙÀÌÆ®±îÁö¸¸ Ç¥½ÃÇÏ°í, ³ª¸ÓÁö´Â "..."À¸·Î Ç¥½ÃÇÕ´Ï´Ù.
-     */
-    std::wstring InterpretBinary(const BYTE* data, DWORD size);
-    
-    /**
-     * @brief 32ºñÆ® Á¤¼ö µ¥ÀÌÅÍ¸¦ ÇØ¼®
-     *
-     * @param[in] data 32ºñÆ® Á¤¼ö µ¥ÀÌÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â
-     * @return ÇØ¼®µÈ Á¤¼ö ¹®ÀÚ¿­
-     *
-     * @details
-     * ÃÖ¼Ò 4¹ÙÀÌÆ®ÀÇ µ¥ÀÌÅÍ¸¦ 32ºñÆ® Á¤¼ö·Î ÇØ¼®ÇÏ¿© ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     */
-    std::wstring InterpretLong(const BYTE* data, DWORD size);
-    
-    /**
-     * @brief Property Tag¸¦ ¹®ÀÚ¿­·Î º¯È¯
-     *
-     * @param[in] propertyTag º¯È¯ÇÒ Property Tag
-     * @return Property Tag ¹®ÀÚ¿­
-     *
-     * @details
-     * ¾Ë·ÁÁø Property TagµéÀ» ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * ¾Ë ¼ö ¾ø´Â Tag´Â "UNKNOWN_TAG"·Î ¹İÈ¯ÇÕ´Ï´Ù.
-     */
-    std::wstring PropertyTagToString(WORD propertyTag);
-    
-    /**
-     * @brief Property TypeÀ» ¹®ÀÚ¿­·Î º¯È¯
-     *
-     * @param[in] propertyType º¯È¯ÇÒ Property Type
-     * @return Property Type ¹®ÀÚ¿­
-     *
-     * @details
-     * ¾Ë·ÁÁø Property TypeµéÀ» ¹®ÀÚ¿­·Î º¯È¯ÇÕ´Ï´Ù.
-     * ¾Ë ¼ö ¾ø´Â TypeÀº "UNKNOWN_TYPE"À¸·Î ¹İÈ¯ÇÕ´Ï´Ù.
-     */
-    std::wstring PropertyTypeToString(WORD propertyType);
-    
-    /**
-     * @brief µğ¹ö±× ·¹º§ ·Î±× Ãâ·Â
-     *
-     * @param[in] message Ãâ·ÂÇÒ ¸Ş½ÃÁö
-     *
-     * @details
-     * µğ¹ö±× ·Î±ëÀÌ È°¼ºÈ­µÇ¾î ÀÖ°í ·Î±× ·¹º§ÀÌ 3 ÀÌ»óÀÏ ¶§¸¸ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogDebug(const std::wstring& message);
-    
-    /**
-     * @brief Á¤º¸ ·¹º§ ·Î±× Ãâ·Â
-     *
-     * @param[in] message Ãâ·ÂÇÒ ¸Ş½ÃÁö
-     *
-     * @details
-     * µğ¹ö±× ·Î±ëÀÌ È°¼ºÈ­µÇ¾î ÀÖ°í ·Î±× ·¹º§ÀÌ 2 ÀÌ»óÀÏ ¶§¸¸ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogInfo(const std::wstring& message);
-    
-    /**
-     * @brief °æ°í ·¹º§ ·Î±× Ãâ·Â
-     *
-     * @param[in] message Ãâ·ÂÇÒ ¸Ş½ÃÁö
-     *
-     * @details
-     * µğ¹ö±× ·Î±ëÀÌ È°¼ºÈ­µÇ¾î ÀÖ°í ·Î±× ·¹º§ÀÌ 1 ÀÌ»óÀÏ ¶§¸¸ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogWarning(const std::wstring& message);
-    
-    /**
-     * @brief ¿¡·¯ ·¹º§ ·Î±× Ãâ·Â
-     *
-     * @param[in] message Ãâ·ÂÇÒ ¸Ş½ÃÁö
-     *
-     * @details
-     * µğ¹ö±× ·Î±ëÀÌ È°¼ºÈ­µÇ¾î ÀÖ°í ·Î±× ·¹º§ÀÌ 0 ÀÌ»óÀÏ ¶§¸¸ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogError(const std::wstring& message);
-    
-    /**
-     * @brief ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ hex dump ÇüÅÂ·Î Ãâ·Â
-     *
-     * @param[in] prefix Ãâ·ÂÇÒ Á¢µÎ»ç
-     * @param[in] data Ãâ·ÂÇÒ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ
-     * @param[in] size µ¥ÀÌÅÍ Å©±â
-     * @param[in] maxBytes ÃÖ´ë Ãâ·ÂÇÒ ¹ÙÀÌÆ® ¼ö (±âº»°ª: 32)
-     *
-     * @details
-     * ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ hex ÇüÅÂ·Î Ãâ·ÂÇÕ´Ï´Ù.
-     * µğ¹ö±× ·Î±ëÀÌ È°¼ºÈ­µÇ¾î ÀÖ°í ·Î±× ·¹º§ÀÌ 3 ÀÌ»óÀÏ ¶§¸¸ Ãâ·ÂÇÕ´Ï´Ù.
-     */
-    void LogHexDump(const std::wstring& prefix, const BYTE* data, DWORD size, DWORD maxBytes = 32);
-    
-private:
-    std::vector<PROPERTY_VALUE> m_properties;  ///< ÆÄ½ÌµÈ ¼Ó¼ºµéÀÇ º¤ÅÍ
-    bool m_debugEnabled;                       ///< µğ¹ö±× ·Î±ë È°¼ºÈ­ ¿©ºÎ
-    int m_logLevel;                            ///< ·Î±× ·¹º§ (0=Error, 1=Warning, 2=Info, 3=Debug)
-};
+// ìµœëŒ€ ìˆ˜ì‹ ì ì£¼ì†Œ ê¸¸ì´
+#define		MAX_RECIPIENT_ADDR_LEN	256

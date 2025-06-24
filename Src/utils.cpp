@@ -1,3 +1,21 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "utils.h"
 
 namespace Utils {
@@ -34,27 +52,27 @@ namespace Utils {
         DWORD result = GetFullPathNameW(relativePath.c_str(), MAX_PATH, fullPath, nullptr);
         
         if (result == 0 || result >= MAX_PATH) {
-            return relativePath; // º¯È¯ ½ÇÆĞ½Ã ¿øº» ¹İÈ¯
+            return relativePath; // ë³€í™˜ ì‹¤íŒ¨ì‹œ ìƒëŒ€ ë°˜í™˜
         }
         
         return std::wstring(fullPath);
     }
 
     bool ValidateFilePath(const std::wstring& filePath) {
-        // ÆÄÀÏ Á¸Àç ¿©ºÎ È®ÀÎ
+        // íŒŒì¼ ì¡´ì¬ ì—¬ë¶€ í™•ì¸
         DWORD attrs = GetFileAttributesW(filePath.c_str());
         if (attrs == INVALID_FILE_ATTRIBUTES) {
             std::wcerr << L"[ERROR] File does not exist: " << filePath << std::endl;
             return false;
         }
         
-        // ÆÄÀÏÀÎÁö È®ÀÎ (µğ·ºÅä¸®°¡ ¾Æ´ÑÁö)
+        // íŒŒì¼ì¸ì§€ í™•ì¸ (ë””ë ‰í† ë¦¬ê°€ ì•„ë‹Œì§€)
         if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
             std::wcerr << L"[ERROR] Specified path is a directory: " << filePath << std::endl;
             return false;
         }
         
-        // .msg È®ÀåÀÚ È®ÀÎ
+        // .msg í™•ì¥ì í™•ì¸
         std::wstring extension = filePath.substr(filePath.find_last_of(L"."));
         std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
         
@@ -72,13 +90,13 @@ namespace Utils {
         std::wstring fileName = GetFileNameWithoutExtension(msgFilePath);
         std::wstring outputDir = dateTime + L"_" + fileName + L"_data";
         
-        // ÇöÀç µğ·ºÅä¸®¿¡ »ı¼º
+        // í˜„ì¬ ë””ë ‰í† ë¦¬ì— ìƒì„±
         wchar_t currentDir[MAX_PATH];
         GetCurrentDirectoryW(MAX_PATH, currentDir);
         
         std::wstring fullPath = std::wstring(currentDir) + L"\\" + outputDir;
         
-        // µğ·ºÅä¸® »ı¼º
+        // ë””ë ‰í† ë¦¬ ìƒì„±
         if (!CreateDirectoryW(fullPath.c_str(), nullptr)) {
             DWORD error = GetLastError();
             if (error != ERROR_ALREADY_EXISTS) {
@@ -92,12 +110,12 @@ namespace Utils {
 
     bool ValidateAndCreateOutputDir(std::wstring& outputDir) {
         if (outputDir.empty()) {
-            // ÀÚµ¿ Ãâ·Â µğ·ºÅä¸® »ı¼º
+            // ìë™ ì¶œë ¥ ë””ë ‰í† ë¦¬ ìƒì„±
             outputDir = L"";
-            return true; // GenerateOutputDirectory¿¡¼­ Ã³¸®
+            return true; // GenerateOutputDirectoryì—ì„œ ì²˜ë¦¬
         }
         
-        // µğ·ºÅä¸® »ı¼º ½Ãµµ
+        // ë””ë ‰í† ë¦¬ ìƒì„± ì‹œë„
         if (!CreateDirectoryW(outputDir.c_str(), nullptr)) {
             DWORD error = GetLastError();
             if (error != ERROR_ALREADY_EXISTS) {
@@ -106,7 +124,7 @@ namespace Utils {
             }
         }
         
-        // µğ·ºÅä¸®ÀÎÁö È®ÀÎ
+        // ë””ë ‰í† ë¦¬ì¸ì§€ í™•ì¸
         DWORD attrs = GetFileAttributesW(outputDir.c_str());
         if (attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
             std::wcerr << L"[ERROR] Output path is not a valid directory: " << outputDir << std::endl;
@@ -119,13 +137,13 @@ namespace Utils {
     bool CreateDirectoryRecursive(const std::wstring& path) {
         if (path.empty()) return false;
         
-        // ÀÌ¹Ì Á¸ÀçÇÏ´ÂÁö È®ÀÎ
+        // ì´ë¯¸ ì¡´ì¬í•˜ëŠ”ì§€ í™•ì¸
         DWORD attrs = GetFileAttributesW(path.c_str());
         if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-            return true;  // ÀÌ¹Ì Á¸ÀçÇÔ
+            return true;  // ì´ë¯¸ ì¡´ì¬í•¨
         }
         
-        // »óÀ§ µğ·ºÅä¸® »ı¼º
+        // ìƒìœ„ ë””ë ‰í† ë¦¬ ìƒì„±
         size_t lastSlash = path.find_last_of(L"\\/");
         if (lastSlash != std::wstring::npos) {
             std::wstring parentPath = path.substr(0, lastSlash);
@@ -134,20 +152,20 @@ namespace Utils {
             }
         }
         
-        // ÇöÀç µğ·ºÅä¸® »ı¼º
+        // í˜„ì¬ ë””ë ‰í† ë¦¬ ìƒì„±
         return CreateDirectoryW(path.c_str(), nullptr) == TRUE || GetLastError() == ERROR_ALREADY_EXISTS;
     }
 
     std::wstring MakeSafeFileName(const std::wstring& originalName) {
         std::wstring safeName = originalName;
         
-        // Windows ÆÄÀÏ¸í¿¡¼­ »ç¿ëÇÒ ¼ö ¾ø´Â ¹®ÀÚµéÀ» ¾ğ´õ½ºÄÚ¾î·Î º¯°æ
+        // Windows íŒŒì¼ëª…ì—ì„œ ì‚¬ìš©í•  ìˆ˜ ì—†ëŠ” ë¬¸ìë“¤ì„ ì–¸ë”ìŠ¤ì½”ì–´ë¡œ ë³€ê²½
         const std::wstring invalidChars = L"<>:\"/\\|?*";
         for (wchar_t c : invalidChars) {
             std::replace(safeName.begin(), safeName.end(), c, L'_');
         }
         
-        // ÆÄÀÏ¸íÀÌ ³Ê¹« ±æ¸é ÀÚ¸£±â (Windows °æ·Î Á¦ÇÑ °í·Á)
+        // íŒŒì¼ëª…ì´ ë„ˆë¬´ ê¸¸ë©´ ìë¥´ê¸° (Windows ê²½ë¡œ ì œí•œ ê³ ë ¤)
         if (safeName.length() > 200) {
             safeName = safeName.substr(0, 200);
         }

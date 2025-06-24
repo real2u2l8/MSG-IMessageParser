@@ -1,29 +1,43 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 #include "pch.h"
 
 /**
- * @brief ±ÇÇÑ °ü¸® °ü·Ã ÇÔ¼öµéÀ» ¸ğ¾Æ³õÀº ³×ÀÓ½ºÆäÀÌ½º
- * 
- * @details
- * ÇÁ·Î±×·¥ ½ÇÇà¿¡ ÇÊ¿äÇÑ ±ÇÇÑµéÀ» È®ÀÎÇÏ°í °ü¸®ÇÕ´Ï´Ù.
- * °ü¸®ÀÚ ±ÇÇÑ È®ÀÎ, Æ¯±Ç °ËÁõ µîÀÌ Æ÷ÇÔµË´Ï´Ù.
+ * ê¶Œí•œ ê´€ë¦¬ ê´€ë ¨ í•¨ìˆ˜ë“¤ì„ ëª¨ì•„ë†“ì€ ë„¤ì„ìŠ¤í˜ì´ìŠ¤
  */
 namespace Privilege {
 
     /**
-     * @brief ÇöÀç ÇÁ·Î¼¼½º°¡ °ü¸®ÀÚ ±ÇÇÑÀ¸·Î ½ÇÇàµÇ°í ÀÖ´ÂÁö È®ÀÎ
+     * @brief í˜„ì¬ í”„ë¡œì„¸ìŠ¤ê°€ ê´€ë¦¬ì ê¶Œí•œìœ¼ë¡œ ì‹¤í–‰ë˜ê³  ìˆëŠ”ì§€ í™•ì¸
      * 
-     * @return true °ü¸®ÀÚ ±ÇÇÑÀ¸·Î ½ÇÇà Áß, false ÀÏ¹İ »ç¿ëÀÚ ±ÇÇÑ
+     * @return true ê´€ë¦¬ì ê¶Œí•œìœ¼ë¡œ ì‹¤í–‰ ì¤‘, false ì¼ë°˜ ì‚¬ìš©ì ê¶Œí•œ
      * 
      * @details
-     * Windows API¸¦ »ç¿ëÇÏ¿© ÇöÀç ÇÁ·Î¼¼½º°¡ Administrators ±×·ì¿¡
-     * ¼ÓÇÏ´ÂÁö È®ÀÎÇÕ´Ï´Ù. MSG ÆÄÀÏ Á¢±Ù¿¡ °ü¸®ÀÚ ±ÇÇÑÀÌ ÇÊ¿äÇÏ¹Ç·Î
-     * ÇÁ·Î±×·¥ ½ÃÀÛ ½Ã ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ¿© ±ÇÇÑÀ» °ËÁõÇÕ´Ï´Ù.
+     * Windows APIë¥¼ ì‚¬ìš©í•˜ì—¬ í˜„ì¬ í”„ë¡œì„¸ìŠ¤ê°€ Administrators ê·¸ë£¹ì—
+     * ì†í•˜ëŠ”ì§€ í™•ì¸í•©ë‹ˆë‹¤. MSG íŒŒì¼ ì ‘ê·¼ì— ê´€ë¦¬ì ê¶Œí•œì´ í•„ìš”í•˜ë¯€ë¡œ
+     * í”„ë¡œê·¸ë¨ ì‹œì‘ ì‹œ ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ì—¬ ê¶Œí•œì„ ê²€ì¦í•©ë‹ˆë‹¤.
      * 
      * @note
-     * - CheckTokenMembership API¸¦ »ç¿ëÇÕ´Ï´Ù.
-     * - Administrators ±×·ìÀÇ SID¸¦ »ı¼ºÇÏ¿© È®ÀÎÇÕ´Ï´Ù.
-     * - ±ÇÇÑ È®ÀÎ¿¡ ½ÇÆĞÇÏ¸é false¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
+     * - CheckTokenMembership APIë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
+     * - Administrators ê·¸ë£¹ì˜ SIDë¥¼ ìƒì„±í•˜ì—¬ í™•ì¸í•©ë‹ˆë‹¤.
+     * - ê¶Œí•œ í™•ì¸ì— ì‹¤íŒ¨í•˜ë©´ falseë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
      * 
      * @example
      * if (!Privilege::IsRunningAsAdministrator()) {

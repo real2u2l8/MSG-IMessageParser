@@ -1,158 +1,176 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 #include "pch.h"
 
 /**
- * @brief À¯Æ¿¸®Æ¼ ÇÔ¼öµéÀ» ¸ğ¾Æ³õÀº ³×ÀÓ½ºÆäÀÌ½º
+ * @brief ìœ í‹¸ë¦¬í‹° í•¨ìˆ˜ë“¤ì„ ëª¨ì•„ë†“ì€ ë„¤ì„ìŠ¤í˜ì´ìŠ¤
  * 
  * @details
- * ÆÄÀÏ °æ·Î Ã³¸®, µğ·ºÅä¸® °ü¸®, ³¯Â¥/½Ã°£ Ã³¸® µî
- * °øÅëÀûÀ¸·Î »ç¿ëµÇ´Â À¯Æ¿¸®Æ¼ ÇÔ¼öµéÀ» Á¦°øÇÕ´Ï´Ù.
+ * íŒŒì¼ ê²½ë¡œ ì²˜ë¦¬, ì¶œë ¥ ë””ë ‰í† ë¦¬ ê´€ë¦¬, ë‚ ì§œ/ì‹œê°„ ì²˜ë¦¬ ë“±
+ * ë²”ìš©ì ìœ¼ë¡œ ì‚¬ìš©ë˜ëŠ” ìœ í‹¸ë¦¬í‹° í•¨ìˆ˜ë“¤ì„ ì •ë¦¬í•©ë‹ˆë‹¤.
  */
 namespace Utils {
 
     /**
-     * @brief ÇöÀç ³¯Â¥¿Í ½Ã°£À» ¹®ÀÚ¿­·Î ¹İÈ¯
+     * @brief í˜„ì¬ ë‚ ì§œì™€ ì‹œê°„ì„ ë¬¸ìì—´ë¡œ ë°˜í™˜
      * 
-     * @return YYYYMMDD_HHMMSS Çü½ÄÀÇ ¹®ÀÚ¿­
+     * @return YYYYMMDD_HHMMSS í˜•ì‹ì˜ ë¬¸ìì—´
      * 
      * @details
-     * ½Ã½ºÅÛÀÇ ÇöÀç ½Ã°£À» °¡Á®¿Í¼­ ÆÄÀÏ¸í¿¡ »ç¿ëÇÒ ¼ö ÀÖ´Â
-     * Çü½ÄÀ¸·Î º¯È¯ÇÕ´Ï´Ù.
+     * ì‹œìŠ¤í…œì˜ í˜„ì¬ ì‹œê°„ì„ ê°€ì ¸ì™€ì„œ íŒŒì¼ëª…ì— ì‚¬ìš©í•  ìˆ˜ ìˆëŠ”
+     * í˜•ì‹ìœ¼ë¡œ ë³€í™˜í•©ë‹ˆë‹¤.
      * 
      * @example
      * std::wstring timestamp = Utils::GetCurrentDateTime();
-     * // °á°ú: "20241201_143052"
+     * // ê²°ê³¼: "20241201_143052"
      */
     std::wstring GetCurrentDateTime();
 
     /**
-     * @brief ÆÄÀÏ¸í¿¡¼­ È®ÀåÀÚ Á¦°Å
+     * @brief íŒŒì¼ëª…ì—ì„œ í™•ì¥ì ì œê±°
      * 
-     * @param[in] fullPath ÀüÃ¼ ÆÄÀÏ °æ·Î
-     * @return È®ÀåÀÚ°¡ Á¦°ÅµÈ ÆÄÀÏ¸í
+     * @param[in] fullPath ì „ì²´ íŒŒì¼ ê²½ë¡œ
+     * @return í™•ì¥ìê°€ ì œê±°ëœ íŒŒì¼ëª…
      * 
      * @details
-     * ÆÄÀÏ °æ·Î¿¡¼­ ÆÄÀÏ¸í¸¸ ÃßÃâÇÏ°í È®ÀåÀÚ¸¦ Á¦°ÅÇÕ´Ï´Ù.
+     * íŒŒì¼ ê²½ë¡œì—ì„œ íŒŒì¼ëª…ë§Œ ì¶”ì¶œí•˜ê³  í™•ì¥ìë¥¼ ì œê±°í•©ë‹ˆë‹¤.
      * 
      * @example
      * std::wstring name = Utils::GetFileNameWithoutExtension(L"C:\\test\\file.msg");
-     * // °á°ú: "file"
+     * // ê²°ê³¼: "file"
      */
     std::wstring GetFileNameWithoutExtension(const std::wstring& fullPath);
 
     /**
-     * @brief ÀüÃ¼ °æ·Î¿¡¼­ ÆÄÀÏ¸í¸¸ ÃßÃâ
+     * @brief ì „ì²´ ê²½ë¡œì—ì„œ íŒŒì¼ëª…ë§Œ ì¶”ì¶œ
      * 
-     * @param[in] fullPath ÀüÃ¼ ÆÄÀÏ °æ·Î
-     * @return ÆÄÀÏ¸í (È®ÀåÀÚ Æ÷ÇÔ)
+     * @param[in] fullPath ì „ì²´ íŒŒì¼ ê²½ë¡œ
+     * @return íŒŒì¼ëª… (í™•ì¥ì í¬í•¨)
      * 
      * @details
-     * °æ·Î ±¸ºĞÀÚ(\\ ¶Ç´Â /)¸¦ ±âÁØÀ¸·Î ÆÄÀÏ¸í¸¸ ÃßÃâÇÕ´Ï´Ù.
+     * ê²½ë¡œ êµ¬ë¶„ì(\\ ë˜ëŠ” /)ë¥¼ ê¸°ì¤€ìœ¼ë¡œ íŒŒì¼ëª…ë§Œ ì¶”ì¶œí•©ë‹ˆë‹¤.
      * 
      * @example
      * std::wstring name = Utils::GetFileName(L"C:\\test\\file.msg");
-     * // °á°ú: "file.msg"
+     * // ê²°ê³¼: "file.msg"
      */
     std::wstring GetFileName(const std::wstring& fullPath);
 
     /**
-     * @brief »ó´ë °æ·Î¸¦ Àı´ë °æ·Î·Î º¯È¯
+     * @brief ìƒëŒ€ ê²½ë¡œë¥¼ ì ˆëŒ€ ê²½ë¡œë¡œ ë³€í™˜
      * 
-     * @param[in] relativePath »ó´ë °æ·Î
-     * @return Àı´ë °æ·Î
+     * @param[in] relativePath ìƒëŒ€ ê²½ë¡œ
+     * @return ì ˆëŒ€ ê²½ë¡œ
      * 
      * @details
-     * Windows APIÀÇ GetFullPathNameW¸¦ »ç¿ëÇÏ¿©
-     * »ó´ë °æ·Î¸¦ Àı´ë °æ·Î·Î º¯È¯ÇÕ´Ï´Ù.
-     * º¯È¯¿¡ ½ÇÆĞÇÏ¸é ¿øº» °æ·Î¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
+     * Windows APIì˜ GetFullPathNameWë¥¼ ì‚¬ìš©í•˜ì—¬
+     * ìƒëŒ€ ê²½ë¡œë¥¼ ì ˆëŒ€ ê²½ë¡œë¡œ ë³€í™˜í•©ë‹ˆë‹¤.
+     * ë³€í™˜ì— ì‹¤íŒ¨í•˜ë©´ ìƒëŒ€ ê²½ë¡œë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
      * 
      * @example
      * std::wstring absPath = Utils::GetAbsolutePath(L".\\test.msg");
-     * // °á°ú: "C:\\current\\directory\\test.msg"
+     * // ê²°ê³¼: "C:\\current\\directory\\test.msg"
      */
     std::wstring GetAbsolutePath(const std::wstring& relativePath);
 
     /**
-     * @brief MSG ÆÄÀÏ °æ·Î À¯È¿¼º °Ë»ç
+     * @brief MSG íŒŒì¼ ê²½ë¡œ ìœ íš¨ì„± ê²€ì‚¬
      * 
-     * @param[in] filePath °Ë»çÇÒ ÆÄÀÏ °æ·Î
-     * @return true À¯È¿ÇÑ MSG ÆÄÀÏ, false À¯È¿ÇÏÁö ¾ÊÀ½
+     * @param[in] filePath ê²€ì‚¬í•  íŒŒì¼ ê²½ë¡œ
+     * @return true ìœ íš¨í•œ MSG íŒŒì¼, false ìœ íš¨í•˜ì§€ ì•ŠìŒ
      * 
      * @details
-     * ´ÙÀ½ Á¶°ÇµéÀ» °Ë»çÇÕ´Ï´Ù:
-     * - ÆÄÀÏÀÌ ½ÇÁ¦·Î Á¸ÀçÇÏ´ÂÁö
-     * - µğ·ºÅä¸®°¡ ¾Æ´Ñ ÆÄÀÏÀÎÁö
-     * - .msg È®ÀåÀÚ¸¦ °¡Áö°í ÀÖ´ÂÁö
+     * ë‹¤ìŒ ì¡°ê±´ë“¤ì„ ê²€ì‚¬í•©ë‹ˆë‹¤:
+     * - íŒŒì¼ì´ ì‹¤ì œë¡œ ì¡´ì¬í•˜ëŠ”ì§€
+     * - ë””ë ‰í† ë¦¬ê°€ ì•„ë‹Œ íŒŒì¼ì¸ì§€
+     * - .msg í™•ì¥ìë¥¼ ê°€ì§€ê³  ìˆëŠ”ì§€
      * 
      * @note
-     * °Ë»ç ½ÇÆĞ ½Ã ±¸Ã¼ÀûÀÎ ¿¡·¯ ¸Ş½ÃÁö¸¦ Ç¥ÁØ ¿¡·¯ Ãâ·Â¿¡ Ãâ·ÂÇÕ´Ï´Ù.
+     * ê²€ì‚¬ ì‹¤íŒ¨ ì‹œ ìƒì„¸í•œ ì˜¤ë¥˜ ë©”ì‹œì§€ë¥¼ í‘œì¤€ ì˜¤ë¥˜ ì¶œë ¥ì— ì¶œë ¥í•©ë‹ˆë‹¤.
      */
     bool ValidateFilePath(const std::wstring& filePath);
 
     /**
-     * @brief ÀÚµ¿ Ãâ·Â µğ·ºÅä¸® »ı¼º
+     * @brief ìë™ ì¶œë ¥ ë””ë ‰í† ë¦¬ ìƒì„±
      * 
-     * @param[in] msgFilePath MSG ÆÄÀÏ °æ·Î
-     * @return »ı¼ºµÈ Ãâ·Â µğ·ºÅä¸® °æ·Î (½ÇÆĞ ½Ã ºó ¹®ÀÚ¿­)
+     * @param[in] msgFilePath MSG íŒŒì¼ ê²½ë¡œ
+     * @return ìƒì„±ëœ ì¶œë ¥ ë””ë ‰í† ë¦¬ ê²½ë¡œ (ì‹¤íŒ¨ ì‹œ ë¹ˆ ë¬¸ìì—´)
      * 
      * @details
-     * MSG ÆÄÀÏ¸í°ú ÇöÀç ½Ã°£À» Á¶ÇÕÇÏ¿© ÀÚµ¿À¸·Î Ãâ·Â µğ·ºÅä¸®¸¦ »ı¼ºÇÕ´Ï´Ù.
-     * Çü½Ä: YYYYMMDD_HHMMSS_filename_data
+     * MSG íŒŒì¼ëª…ê³¼ í˜„ì¬ ì‹œê°„ì„ ì¡°í•©í•˜ì—¬ ìë™ìœ¼ë¡œ ì¶œë ¥ ë””ë ‰í† ë¦¬ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
+     * í˜•ì‹: YYYYMMDD_HHMMSS_filename_data
      * 
      * @example
      * std::wstring outputDir = Utils::GenerateOutputDirectory(L"C:\\test.msg");
-     * // °á°ú: "C:\\current\\20241201_143052_test_data"
+     * // ê²°ê³¼: "C:\\current\\20241201_143052_test_data"
      */
     std::wstring GenerateOutputDirectory(const std::wstring& msgFilePath);
 
     /**
-     * @brief Ãâ·Â µğ·ºÅä¸® »ı¼º ¹× °ËÁõ
+     * @brief ì¶œë ¥ ë””ë ‰í† ë¦¬ ìƒì„± ë° ê²€ì¦
      * 
-     * @param[in,out] outputDir Ãâ·Â µğ·ºÅä¸® °æ·Î (ºó ¹®ÀÚ¿­ÀÌ¸é ÀÚµ¿ »ı¼º)
-     * @return true ¼º°ø, false ½ÇÆĞ
+     * @param[in,out] outputDir ì¶œë ¥ ë””ë ‰í† ë¦¬ ê²½ë¡œ (ë¹ˆ ë¬¸ìì—´ì´ë©´ ìë™ ìƒì„±)
+     * @return true ì„±ê³µ, false ì‹¤íŒ¨
      * 
      * @details
-     * Ãâ·Â µğ·ºÅä¸®°¡ ºñ¾îÀÖÀ¸¸é ÀÚµ¿À¸·Î »ı¼ºÇÏ°í,
-     * ÁöÁ¤µÈ °æ·Î°¡ ÀÖÀ¸¸é ÇØ´ç µğ·ºÅä¸®¸¦ °ËÁõÇÏ°í »ı¼ºÇÕ´Ï´Ù.
+     * ì¶œë ¥ ë””ë ‰í† ë¦¬ê°€ ë¹„ì–´ìˆìœ¼ë©´ ìë™ìœ¼ë¡œ ìƒì„±í•˜ê³ ,
+     * ì§€ì •ëœ ê²½ë¡œê°€ ìˆìœ¼ë©´ í•´ë‹¹ ë””ë ‰í† ë¦¬ë¥¼ ê²€ì¦í•˜ê³  ìƒì„±í•©ë‹ˆë‹¤.
      * 
      * @note
-     * outputDirÀÌ ºó ¹®ÀÚ¿­ÀÌ¸é GenerateOutputDirectory¸¦ È£ÃâÇÏ¿©
-     * ÀÚµ¿À¸·Î µğ·ºÅä¸®¸¦ »ı¼ºÇÕ´Ï´Ù.
+     * outputDirì´ ë¹ˆ ë¬¸ìì—´ì´ë©´ GenerateOutputDirectoryë¥¼ í˜¸ì¶œí•˜ì—¬
+     * ìë™ìœ¼ë¡œ ë””ë ‰í† ë¦¬ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
      */
     bool ValidateAndCreateOutputDir(std::wstring& outputDir);
 
     /**
-     * @brief µğ·ºÅä¸®¸¦ Àç±ÍÀûÀ¸·Î »ı¼º
+     * @brief ë””ë ‰í† ë¦¬ë¥¼ ì¬ê·€ì ìœ¼ë¡œ ìƒì„±
      * 
-     * @param[in] path »ı¼ºÇÒ µğ·ºÅä¸® °æ·Î
-     * @return true »ı¼º ¼º°ø ¶Ç´Â ÀÌ¹Ì Á¸Àç, false »ı¼º ½ÇÆĞ
+     * @param[in] path ìƒì„±í•  ë””ë ‰í† ë¦¬ ê²½ë¡œ
+     * @return true ìƒì„± ì„±ê³µ ë˜ëŠ” ì´ë¯¸ ì¡´ì¬, false ìƒì„± ì‹¤íŒ¨
      * 
      * @details
-     * ÁöÁ¤µÈ °æ·ÎÀÇ ¸ğµç »óÀ§ µğ·ºÅä¸®¸¦ Æ÷ÇÔÇÏ¿© µğ·ºÅä¸®¸¦ »ı¼ºÇÕ´Ï´Ù.
-     * ÀÌ¹Ì Á¸ÀçÇÏ´Â µğ·ºÅä¸®´Â ¼º°øÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
+     * ì§€ì •ëœ ê²½ë¡œì˜ ëª¨ë“  ìƒìœ„ ë””ë ‰í† ë¦¬ë¥¼ í¬í•¨í•˜ì—¬ ë””ë ‰í† ë¦¬ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
+     * ì´ë¯¸ ì¡´ì¬í•˜ëŠ” ë””ë ‰í† ë¦¬ëŠ” ì„±ê³µìœ¼ë¡œ ì²˜ë¦¬í•©ë‹ˆë‹¤.
      * 
      * @note
-     * Windows APIÀÇ CreateDirectoryW¸¦ »ç¿ëÇÕ´Ï´Ù.
-     * ERROR_ALREADY_EXISTS ¿¡·¯´Â ¼º°øÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
+     * Windows APIì˜ CreateDirectoryWë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
+     * ERROR_ALREADY_EXISTS ì˜¤ë¥˜ëŠ” ì„±ê³µìœ¼ë¡œ ì²˜ë¦¬í•©ë‹ˆë‹¤.
      */
     bool CreateDirectoryRecursive(const std::wstring& path);
 
     /**
-     * @brief ¾ÈÀüÇÑ ÆÄÀÏ¸í »ı¼º (Æ¯¼ö¹®ÀÚ Ã³¸®)
+     * @brief ì•ˆì „í•œ íŒŒì¼ëª… ìƒì„± (íŠ¹ìˆ˜ë¬¸ì ì²˜ë¦¬)
      * 
-     * @param[in] originalName ¿øº» ÆÄÀÏ¸í
-     * @return ¾ÈÀüÇÑ ÆÄÀÏ¸í
+     * @param[in] originalName ì›ë³¸ íŒŒì¼ëª…
+     * @return ì•ˆì „í•œ íŒŒì¼ëª…
      * 
      * @details
-     * Windows ÆÄÀÏ¸í¿¡¼­ »ç¿ëÇÒ ¼ö ¾ø´Â Æ¯¼ö¹®ÀÚµéÀ» ¾ğ´õ½ºÄÚ¾î·Î º¯°æÇÕ´Ï´Ù.
-     * ÆÄÀÏ¸íÀÌ ³Ê¹« ±æ °æ¿ì 200ÀÚ·Î ÀÚ¸¨´Ï´Ù.
+     * Windows íŒŒì¼ëª…ì—ì„œ ì‚¬ìš©í•  ìˆ˜ ì—†ëŠ” íŠ¹ìˆ˜ë¬¸ìë“¤ì„ ì–¸ë”ìŠ¤ì½”ì–´ë¡œ ë³€ê²½í•©ë‹ˆë‹¤.
+     * íŒŒì¼ëª…ì´ ë„ˆë¬´ ê¸´ ê²½ìš° 200ìë¡œ ì œí•œí•©ë‹ˆë‹¤.
      * 
      * @note
-     * º¯°æµÇ´Â ¹®ÀÚ: < > : " / \ | ? *
+     * ë³€ê²½ë˜ëŠ” ë¬¸ì: < > : " / \ | ? *
      * 
      * @example
      * std::wstring safeName = Utils::MakeSafeFileName(L"file<name>:test");
-     * // °á°ú: "file_name_test"
+     * // ê²°ê³¼: "file_name_test"
      */
     std::wstring MakeSafeFileName(const std::wstring& originalName);
 

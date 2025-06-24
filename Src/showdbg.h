@@ -1,3 +1,21 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef __SHOWDEBUG_H__
 	#define __SHOWDEBUG_H__
 
@@ -15,17 +33,17 @@
 	#define LOGFILE_LIMIT_SIZE 5242880 //5 Mbyte
 	#define DEBUG_WRITE_PATH "C:\\IMessageParser\\Logs\\IMessageParser.log"
 
-	// ¸ÖÆ¼¹ÙÀÌÆ® ¹®ÀÚ ÁıÇÕÀÏ ¶§¸¸ »ç¿ë °¡´ÉÇÑ µğ¹ö±× ÇÔ¼öµé
+	// ë©€í‹°ë°”ì´íŠ¸ ë¬¸ì ì„¸íŠ¸ì¼ ë•Œë§Œ ì‚¬ìš© ê°€ëŠ¥í•œ ë””ë²„ê·¸ í•¨ìˆ˜ë“¤
 	#if !defined(UNICODE) && !defined(_UNICODE)
 	extern void _SHOW_DEBUG(char *fmt, ...);
 	extern void WriteLOGFile(char *szFilePath, const char *pFmt, ...);
 	#else
-	// À¯´ÏÄÚµå ¸ğµåÀÏ ¶§´Â ºó ÇÔ¼ö·Î Á¤ÀÇ (ÄÄÆÄÀÏ ¿¡·¯ ¹æÁö)
+	// ìœ ë‹ˆì½”ë“œ ë¹Œë“œì¼ ë•ŒëŠ” ë¹ˆ í•¨ìˆ˜ë¡œ ì •ì˜ (ì»´íŒŒì¼ ì—ëŸ¬ ë°©ì§€)
 	extern void _SHOW_DEBUG(char *fmt, ...);
 	extern void WriteLOGFile(char *szFilePath, const char *pFmt, ...);
 	#endif
 
-	// À¯´ÏÄÚµå ¹öÀüÀº Ç×»ó »ç¿ë °¡´É
+	// ìœ ë‹ˆì½”ë“œ ë²„ì „ ë””ë²„ê·¸/ë¡œê·¸ í•¨ìˆ˜ë“¤
 	extern void _SHOW_DEBUG_W(const WCHAR *fmt, ...);
 	extern void WriteLOGFileW(WCHAR *szFilePath, const WCHAR *pFmt, ...);
 

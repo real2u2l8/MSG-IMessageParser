@@ -1,23 +1,41 @@
+/*
+ * MSG File Parser Tool - Advanced MSG file analysis tool with MAPI property parsing
+ * Copyright (C) 2025  real2u2l8
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 #include "pch.h"
 
 /**
- * @brief »ç¿ëÀÚ ÀÎÅÍÆäÀÌ½º °ü·Ã ÇÔ¼öµéÀ» ¸ğ¾Æ³õÀº ³×ÀÓ½ºÆäÀÌ½º
+ * @brief ï¿½ê¶—ï¿½ìŠœï¿½ì˜„ ï¿½ì”¤ï¿½ê½£ï¿½ëŸ¹ï¿½ì” ï¿½ë’ª æ„¿ï¿½ï¿½ì ´ ï¿½ë¸¿ï¿½ë‹”ï¿½ë±¾ï¿½ì“£ ï§â‘¥ë¸˜ï¿½ë„ƒï¿½ï¿½ï¿½ ï¿½ê½•ï¿½ì—«ï¿½ë’ªï¿½ëŸ¹ï¿½ì” ï¿½ë’ª
  * 
  * @details
- * ÇÁ·Î±×·¥ ½ÇÇà ½Ã »ç¿ëÀÚ¿¡°Ô º¸¿©ÁÖ´Â È­¸é°ú ¸Ş½ÃÁöµéÀ» Ã³¸®ÇÕ´Ï´Ù.
- * »ç¿ë¹ı Ãâ·Â, ¹è³Ê Ç¥½Ã, ¿¡·¯ ¸Ş½ÃÁö µîÀÌ Æ÷ÇÔµË´Ï´Ù.
+ * ï¿½ë´½æ¿¡ì’“ë ‡ï¿½ì˜© ï¿½ë–ï¿½ë»¾ ï¿½ë–† ï¿½ê¶—ï¿½ìŠœï¿½ì˜„ï¿½ë¿‰å¯ƒï¿½ è¹‚ëŒë¿¬äºŒì‡°ë’— ï¿½ì†•ï§ë‹¿ë‚µ ï§ë¶¿ë–†ï§ï¿½ï¿½ë±¾ï¿½ì“£ ï§£ì„â”ï¿½ë¹€ï¿½ë•²ï¿½ë–.
+ * ï¿½ê¶—ï¿½ìŠœè¸°ï¿½ ç•°ì’•ì °, è«›ê³•ê¼« ï¿½ëª´ï¿½ë–†, ï¿½ë¿‰ï¿½ìœ­ ï§ë¶¿ë–†ï§ï¿½ ï¿½ë²‘ï¿½ì”  ï¿½ë£·ï¿½ë¸¿ï¿½ë§—ï¿½ë•²ï¿½ë–.
  */
 namespace UI {
 
     /**
-     * @brief ÇÁ·Î±×·¥ »ç¿ë¹ıÀ» Ãâ·Â
+     * @brief ï¿½ë´½æ¿¡ì’“ë ‡ï¿½ì˜© ï¿½ê¶—ï¿½ìŠœè¸°ëº¤ì“£ ç•°ì’•ì °
      * 
-     * @param[in] programName ÇÁ·Î±×·¥ ÀÌ¸§
+     * @param[in] programName ï¿½ë´½æ¿¡ì’“ë ‡ï¿½ì˜© ï¿½ì” ç”±ï¿½
      * 
      * @details
-     * ÇÁ·Î±×·¥ÀÇ »ç¿ë¹ı, ÀÎÀÚ ¼³¸í, ¿¹Á¦, ±â´É ¼³¸í µîÀ»
-     * ÄÜ¼Ö¿¡ Ãâ·ÂÇÕ´Ï´Ù.
+     * ï¿½ë´½æ¿¡ì’“ë ‡ï¿½ì˜©ï¿½ì“½ ï¿½ê¶—ï¿½ìŠœè¸°ï¿½, ï¿½ì”¤ï¿½ì˜„ ï¿½ê½•ï§ï¿½, ï¿½ì‚ï¿½ì £, æ¹²ê³•ë’« ï¿½ê½•ï§ï¿½ ï¿½ë²‘ï¿½ì“£
+     * è‚„ì„ë„„ï¿½ë¿‰ ç•°ì’•ì °ï¿½ë¹€ï¿½ë•²ï¿½ë–.
      * 
      * @example
      * UI::PrintUsage();

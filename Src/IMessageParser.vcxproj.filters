@@ -39,6 +39,15 @@
     <ClCompile Include="version.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="filehandle.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="mapiparser.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="msgparser.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -63,6 +72,15 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="version.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="filehandle.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="mapiparser.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="msgparser.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
